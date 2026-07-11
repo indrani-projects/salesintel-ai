@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SalesIntel — Editorial</title>
+<style>
+  :root{
+    --bg:#f6f5f2; --paper:#fffdfb; --ink:#1a1a1a; --muted:#6b6b6b;
+    --line:#e7e4dd; --accent:#4338ca; --accent-soft:#eef0ff;
+    --chip:#eef0ff; --chip-ink:#4338ca;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);
+    font-family:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .sample{background:var(--accent);color:#fff;text-align:center;font-size:12px;padding:6px;letter-spacing:.04em}
+  .wrap{max-width:1120px;margin:0 auto;padding:28px 24px 80px;display:grid;grid-template-columns:1fr 340px;gap:28px}
+  header.top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+  .brand .dot{width:26px;height:26px;border-radius:8px;background:radial-gradient(circle at 30% 30%,#6366f1,#4338ca)}
+  .brand b{color:var(--accent)}
+  .toggle{display:flex;gap:2px;background:#efeee9;border:1px solid var(--line);border-radius:12px;padding:4px}
+  .toggle button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--muted);
+    padding:8px 14px;border-radius:9px;cursor:pointer}
+  .toggle button.on{background:var(--paper);color:var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+
+  main{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:44px 48px}
+  .kicker{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}
+  h1{font-family:Georgia,"Times New Roman",serif;font-weight:600;font-size:34px;line-height:1.2;margin:10px 0 6px;letter-spacing:-.01em}
+  .lede{font-size:17px;color:#33333a;max-width:60ch}
+  .meta{font-size:12.5px;color:var(--muted);margin-top:16px;padding-top:14px;border-top:1px solid var(--line);display:flex;gap:14px;flex-wrap:wrap}
+  .badge{background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:11px;padding:3px 10px;border-radius:999px}
+
+  section.sec{padding:26px 0;border-top:1px solid var(--line)}
+  .sec h2{font-family:Georgia,serif;font-size:20px;font-weight:600;display:flex;align-items:center;gap:12px;margin-bottom:12px}
+  .num{font-family:Inter,sans-serif;width:26px;height:26px;flex:0 0 auto;border-radius:8px;background:var(--accent);color:#fff;
+    font-size:13px;font-weight:700;display:grid;place-items:center}
+  .sec p{margin-bottom:10px;color:#2b2b30}
+  .cite{font-size:11px;font-weight:700;color:var(--chip-ink);background:var(--chip);border-radius:5px;padding:0 5px}
+  .map{display:grid;gap:10px;margin-top:6px}
+  .map .row{display:grid;grid-template-columns:1fr;gap:4px;border-left:3px solid var(--accent);padding:10px 14px;background:#faf9ff;border-radius:0 10px 10px 0}
+  .map .row b{color:var(--accent)}
+
+  .sources h3{font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px}
+  .src{display:flex;gap:10px;font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .src .m{font-weight:700;color:var(--accent);background:var(--chip);border-radius:5px;padding:1px 7px;height:fit-content}
+
+  aside{position:sticky;top:24px;align-self:start;background:var(--paper);border:1px solid var(--line);border-radius:18px;overflow:hidden;height:fit-content}
+  .scout-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .scout-h .av{width:30px;height:30px;border-radius:9px;background:radial-gradient(circle at 30% 30%,#6366f1,#4338ca);display:grid;place-items:center;color:#fff;font-size:15px}
+  .scout-h b{font-size:15px}.scout-h span{font-size:12px;color:var(--muted)}
+  .thread{padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-height:360px;overflow:auto}
+  .msg{font-size:13.5px;padding:10px 13px;border-radius:12px;max-width:92%}
+  .msg.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:#f3f3ee;border-bottom-left-radius:4px}
+  .ask{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  .ask input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:13.5px;background:#fbfbf8}
+  .ask button{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:0 16px;font-weight:600;cursor:pointer}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}aside{position:static}}
+</style>
+</head>
+<body>
+<div class="sample">DESIGN SAMPLE 1 — “Editorial”: refined, spacious, serif headlines · light</div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SalesIntel<b>&nbsp;AI</b></div>
+    <div class="toggle">
+      <button class="on">Account Executive</button>
+      <button>Sales Development Rep</button>
+      <button>Solutions Engineer</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="kicker">Account Executive · Pre-Call Brief</div>
+    <h1>The Sleep Company</h1>
+    <p class="lede">Scaling past ₹700 Cr ARR with 70% of sales now offline — a unified omnichannel CRM plus automated post-purchase support is the clearest opening.</p>
+    <div class="meta"><span class="badge">Account Executive</span><span>The Sleep Company</span><span>Wed, Jul 15 · 10:30 AM</span><span>Generated just now</span></div>
+
+    <section class="sec">
+      <h2><span class="num">1</span>Company Snapshot</h2>
+      <p>D2C comfort-tech brand (patented SmartGRID), founded 2019 by Priyanka &amp; Harshil Salot, Mumbai <span class="cite">S4</span>. 150+ exclusive outlets across 45+ cities, 10&nbsp;lakh+ customers, 1,200+ employees <span class="cite">S5</span>.</p>
+    </section>
+
+    <section class="sec">
+      <h2><span class="num">2</span>Financial &amp; Funding Health</h2>
+      <p>Crossed ₹700 Cr ARR in FY25 at 60% YoY growth <span class="cite">S6</span>. Raised ₹480 Cr Series&nbsp;D (ChrysCapital, 360&nbsp;ONE) Aug&nbsp;2025 <span class="cite">S6</span>; prior ₹184 Cr Series&nbsp;C from Premji Invest <span class="cite">S7</span>.</p>
+    </section>
+
+    <section class="sec">
+      <h2><span class="num">5</span>Pain Hypotheses → Zoho</h2>
+      <div class="map">
+        <div class="row"><b>Signal → Pain</b>70% offline + WooCommerce + marketplaces <span class="cite">S6</span> ⇒ fragmented customer data, no single view.</div>
+        <div class="row"><b>Zoho</b>Zoho CRM unifies online/offline/marketplace into one customer record <span class="cite">S10</span>.</div>
+        <div class="row"><b>Signal → Pain</b>100-day trial + 10-yr warranty <span class="cite">S8</span> ⇒ heavy returns/claims volume.</div>
+        <div class="row"><b>Zoho</b>Zoho Desk automates post-purchase tickets &amp; SLAs <span class="cite">S10</span>.</div>
+      </div>
+    </section>
+
+    <section class="sec sources">
+      <h3>Sources</h3>
+      <div class="src"><span class="m">S6</span><span>The Sleep Company raises ₹480 Cr — YourStory</span></div>
+      <div class="src"><span class="m">S7</span><span>Series C ₹184 Cr from Premji Invest — Business Standard</span></div>
+      <div class="src"><span class="m">S10</span><span>Zoho capability sheet (internal)</span></div>
+    </section>
+  </main>
+
+  <aside>
+    <div class="scout-h"><span class="av">◎</span><div><b>Scout</b><br><span>Ask anything about this account</span></div></div>
+    <div class="thread">
+      <div class="msg u">Who led their last round and how much?</div>
+      <div class="msg a">₹480 Cr Series&nbsp;D, led by ChrysCapital and 360&nbsp;ONE Asset <span class="cite">S6</span>.</div>
+      <div class="msg u">Do they use Salesforce today?</div>
+      <div class="msg a">Not stated in the sources — worth confirming on the call.</div>
+    </div>
+    <div class="ask"><input placeholder="Ask Scout…"/><button>Send</button></div>
+  </aside>
+</div>
+</body>
+</html>

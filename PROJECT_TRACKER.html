@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SalesIntel_AI — Build Tracker</title>
+<style>
+  :root {
+    --bg:#0b0e14; --panel:#141922; --panel2:#1b212c; --border:#262e3b;
+    --text:#e6edf3; --muted:#8b98a9; --accent:#5b9dff;
+    --todo:#4b5563; --doing:#d9a441; --done:#3fb950; --blocked:#f04f4f;
+    --lead:#a371f7; --backend:#5b9dff; --ai:#3fb0a8; --frontend:#f778ba;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:#f5f7fa; --panel:#ffffff; --panel2:#f0f3f7; --border:#e2e8f0;
+      --text:#1a2230; --muted:#5c6b7f; --accent:#2563eb;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+         background:var(--bg); color:var(--text); line-height:1.5; }
+  .wrap { max-width:1100px; margin:0 auto; padding:32px 24px 64px; }
+  header.top {
+    background:linear-gradient(135deg,#5b9dff22,#a371f722); border:1px solid var(--border);
+    border-radius:16px; padding:26px 28px; margin-bottom:26px;
+  }
+  h1 { margin:0 0 4px; font-size:26px; letter-spacing:-0.4px; }
+  .sub { color:var(--muted); font-size:14px; }
+  .meta { margin-top:14px; font-size:13px; color:var(--muted); }
+  .progress-shell { margin-top:18px; background:var(--panel2); border-radius:99px;
+    height:14px; overflow:hidden; border:1px solid var(--border); }
+  .progress-bar { height:100%; background:linear-gradient(90deg,#3fb950,#5b9dff);
+    width:0; transition:width .8s ease; border-radius:99px; }
+  .progress-label { margin-top:8px; font-size:13px; color:var(--muted); }
+
+  .legend { display:flex; flex-wrap:wrap; gap:10px; margin:18px 0 8px; font-size:12px; }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:3px 10px;
+    border-radius:99px; font-weight:600; font-size:11.5px; letter-spacing:.2px; }
+  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
+  .st-todo{background:#4b556322;color:var(--todo);} .st-todo .dot{background:var(--todo);}
+  .st-doing{background:#d9a44122;color:var(--doing);} .st-doing .dot{background:var(--doing);}
+  .st-done{background:#3fb95022;color:var(--done);} .st-done .dot{background:var(--done);}
+  .st-blocked{background:#f04f4f22;color:var(--blocked);} .st-blocked .dot{background:var(--blocked);}
+
+  .owner { padding:2px 9px; border-radius:6px; font-size:11px; font-weight:700; }
+  .ow-Lead{background:#a371f722;color:var(--lead);}
+  .ow-Backend{background:#5b9dff22;color:var(--backend);}
+  .ow-AI-Engine{background:#3fb0a822;color:var(--ai);}
+  .ow-Frontend{background:#f778ba22;color:var(--frontend);}
+
+  .phase { margin-top:30px; }
+  .phase-h { display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+  .phase-h h2 { margin:0; font-size:17px; }
+  .phase-h .count { font-size:12px; color:var(--muted); }
+
+  .epic { background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:14px 16px; margin-bottom:12px; }
+  .epic-h { display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-bottom:6px; }
+  .epic-h .name { font-weight:700; font-size:14px; }
+  .epic-h .eid { color:var(--muted); font-weight:600; font-size:12px; margin-right:6px; }
+  .stories { display:flex; flex-direction:column; gap:2px; margin-top:8px; }
+  .story { display:flex; align-items:center; gap:12px; padding:7px 8px; border-radius:8px; }
+  .story:hover { background:var(--panel2); }
+  .story .sid { color:var(--muted); font-size:12px; font-weight:600; min-width:44px; }
+  .story .desc { flex:1; font-size:13.5px; }
+  .story.done .desc { color:var(--muted); }
+  footer { margin-top:40px; color:var(--muted); font-size:12px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>SalesIntel_AI — Build Tracker</h1>
+    <div class="sub">Pre-sales intelligence POC · Zoho → The Sleep Company · Lead + delegated subagents</div>
+    <div class="progress-shell"><div class="progress-bar" id="bar"></div></div>
+    <div class="progress-label" id="plabel">…</div>
+    <div class="meta" id="meta"></div>
+  </header>
+
+  <div class="legend">
+    <span class="pill st-done"><span class="dot"></span>Done</span>
+    <span class="pill st-doing"><span class="dot"></span>In progress</span>
+    <span class="pill st-todo"><span class="dot"></span>Not started</span>
+    <span class="pill st-blocked"><span class="dot"></span>Blocked</span>
+    &nbsp;•&nbsp;
+    <span class="owner ow-Lead">Lead</span>
+    <span class="owner ow-Backend">Backend Agent</span>
+    <span class="owner ow-AI-Engine">AI-Engine Agent</span>
+    <span class="owner ow-Frontend">Frontend Agent</span>
+  </div>
+
+  <div id="board"></div>
+
+  <footer>Maintained by the Lead · updates as each story lands.</footer>
+</div>
+
+<script>
+// ── Single source of truth. Update `status` fields as work lands. ──────────
+// status: "todo" | "doing" | "done" | "blocked"
+const DATA = {
+  lastUpdated: "2026-07-11 · Direction C shipped across the app + test suite (23 pytest + 3 Playwright E2E, all green) · verification gate now mandatory",
+  phases: [
+    { name:"Setup — Runtimes & Environments", owner:"Lead", epics:[
+      { id:"ENV", name:"Prerequisites", stories:[
+        { id:"—", desc:"Install Python 3.12 + Node.js LTS (winget)", owner:"Lead", status:"done" },
+        { id:"—", desc:"Python venv + backend deps", owner:"Lead", status:"done" },
+        { id:"—", desc:"Vite + Tailwind frontend scaffold + deps", owner:"Lead", status:"done" },
+        { id:"—", desc:"Gemini API key in backend/.env (model: gemini-flash-latest)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 0 — Foundation", owner:"Lead", epics:[
+      { id:"E0", name:"Setup & Contract", stories:[
+        { id:"S0.1", desc:"Repo skeleton, .gitignore, README", owner:"Lead", status:"done" },
+        { id:"S0.2", desc:"PROJECT_TRACKER.html (this page)", owner:"Lead", status:"done" },
+        { id:"S0.3", desc:"Lock API contract + schemas.py + contracts.py", owner:"Lead", status:"done" },
+        { id:"S0.4", desc:".env.example, requirements.txt, service stubs", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 1 — Parallel Build", owner:"—", epics:[
+      { id:"E1", name:"Backend skeleton & data", stories:[
+        { id:"S1.1", desc:"FastAPI app + CORS + /health", owner:"Backend", status:"done" },
+        { id:"S1.2", desc:"config.py (pydantic-settings, LLM_*)", owner:"Backend", status:"done" },
+        { id:"S1.3", desc:"SQLite + SQLModel models", owner:"Backend", status:"done" },
+      ]},
+      { id:"E2", name:"APIs & orchestration", stories:[
+        { id:"S2.1", desc:"Meetings router (CRUD)", owner:"Backend", status:"done" },
+        { id:"S2.2", desc:"Briefs router (status, fetch HTML)", owner:"Backend", status:"done" },
+        { id:"S2.3", desc:"Chat router (question + history)", owner:"Backend", status:"done" },
+        { id:"S2.4", desc:"BackgroundTasks auto-trigger + status transitions", owner:"Backend", status:"done" },
+      ]},
+      { id:"E3", name:"Ingestion", stories:[
+        { id:"S3.1", desc:"SourceProvider + LocalFolderProvider", owner:"AI-Engine", status:"done" },
+        { id:"S3.2", desc:"PyMuPDF extraction + cache", owner:"AI-Engine", status:"done" },
+      ]},
+      { id:"E4", name:"Brief synthesis", stories:[
+        { id:"S4.1", desc:"Gemini client (OpenAI-compatible)", owner:"AI-Engine", status:"done" },
+        { id:"S4.2", desc:"9-section grounded + cited prompt (why/agenda-tailored)", owner:"AI-Engine", status:"done" },
+        { id:"S4.3", desc:"Brief JSON → styled HTML render", owner:"AI-Engine", status:"done" },
+      ]},
+      { id:"E5", name:"Chatbot", stories:[
+        { id:"S5.1", desc:"Grounded Q&A + graceful decline", owner:"AI-Engine", status:"done" },
+      ]},
+      { id:"E6", name:"Frontend scaffold & shell", stories:[
+        { id:"S6.1", desc:"Tailwind theme + UI primitives", owner:"Frontend", status:"done" },
+        { id:"S6.2", desc:"Typed API client + TanStack Query", owner:"Frontend", status:"done" },
+        { id:"S6.3", desc:"App layout + nav", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E7", name:"Calendar", stories:[
+        { id:"S7.1", desc:"FullCalendar integration", owner:"Frontend", status:"done" },
+        { id:"S7.2", desc:"Add-meeting dialog (subject, company, why, agenda, time)", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E8", name:"Dashboard", stories:[
+        { id:"S8.1", desc:"Meeting/brief status cards + polling", owner:"Frontend", status:"done" },
+        { id:"S8.2", desc:"Download brief (html2pdf.js) + HTML view", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E9", name:"Brief view + Chatbot", stories:[
+        { id:"S9.1", desc:"Brief renderer (9 sections, citations, flags)", owner:"Frontend", status:"done" },
+        { id:"S9.2", desc:"Chat panel", owner:"Frontend", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 2 — Integration & Demo Readiness", owner:"Lead", epics:[
+      { id:"E10", name:"Integration & E2E", stories:[
+        { id:"S10.1", desc:"Wire FE ↔ BE, polling, CORS", owner:"Lead", status:"done" },
+        { id:"S10.2", desc:"E2E run: meeting → brief → download → chat", owner:"Lead", status:"done" },
+        { id:"S10.3", desc:"Empty/loading/error states, polish", owner:"Lead", status:"done" },
+      ]},
+      { id:"E11", name:"Demo readiness", stories:[
+        { id:"S11.1", desc:"Seed known-company dropdown", owner:"Lead", status:"done" },
+        { id:"S11.2", desc:"README run steps; dry-run demo", owner:"Lead", status:"done" },
+        { id:"S11.3", desc:"Final tracker update → all Done", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 3 — Persona Briefs (AE / SDR / SE)", owner:"Lead", epics:[
+      { id:"E12", name:"Contract & data", stories:[
+        { id:"S12.1", desc:"Persona enum + per-persona section sets (schemas)", owner:"Lead", status:"done" },
+        { id:"S12.2", desc:"Meeting.persona + per-persona Brief rows (models)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E13", name:"AI-engine persona modes", stories:[
+        { id:"S13.1", desc:"generate_brief(persona) + AE/SDR/SE prompts", owner:"Lead", status:"done" },
+        { id:"S13.2", desc:"Signature sections: SDR opener, SE demo plan", owner:"Lead", status:"done" },
+        { id:"S13.3", desc:"Render persona label in HTML", owner:"Lead", status:"done" },
+      ]},
+      { id:"E14", name:"API — multi-persona briefs", stories:[
+        { id:"S14.1", desc:"Primary generates now; other personas lazy on first view", owner:"Lead", status:"done" },
+        { id:"S14.2", desc:"GET brief?persona= / regenerate?persona=", owner:"Lead", status:"done" },
+      ]},
+      { id:"E15", name:"Frontend — selector & toggle", stories:[
+        { id:"S15.1", desc:"Persona selector in meeting dialog", owner:"Frontend", status:"done" },
+        { id:"S15.2", desc:"'View as AE/SDR/SE' toggle + per-persona polling", owner:"Frontend", status:"done" },
+        { id:"S15.3", desc:"Persona badges on cards + brief header", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E16", name:"Verify", stories:[
+        { id:"S16.1", desc:"All 3 personas generate (~15s each), distinct sections", owner:"Lead", status:"done" },
+        { id:"S16.2", desc:"Differentiation verified (SDR opener, SE demo plan)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 4 — Professional Redesign (Direction C)", owner:"—", epics:[
+      { id:"E17", name:"Design system + KPI data", stories:[
+        { id:"S17.1", desc:"key_facts on brief (backend) for the KPI strip", owner:"Lead", status:"done" },
+        { id:"S17.2", desc:"Direction C tokens/theme (colors, type, cards)", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E18", name:"App-wide restyle", stories:[
+        { id:"S18.1", desc:"Dark sidebar app shell (Layout)", owner:"Frontend", status:"done" },
+        { id:"S18.2", desc:"Calendar + themed FullCalendar", owner:"Frontend", status:"done" },
+        { id:"S18.3", desc:"Dashboard cards + status pills", owner:"Frontend", status:"done" },
+        { id:"S18.4", desc:"Brief view: KPI strip, hero, confidence chips", owner:"Frontend", status:"done" },
+        { id:"S18.5", desc:"Scout panel + meeting dialog restyle", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E19", name:"Content polish", stories:[
+        { id:"S19.1", desc:"Full-form persona labels everywhere", owner:"Frontend", status:"done" },
+        { id:"S19.2", desc:"Rename chatbot → 'Scout'", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E20", name:"Verify", stories:[
+        { id:"S20.1", desc:"npm run build passes", owner:"Frontend", status:"done" },
+        { id:"S20.2", desc:"Visual pass across all screens (Playwright shots)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 5 — Testing & Verification (mandatory gate)", owner:"Lead", epics:[
+      { id:"E21", name:"Deterministic test mode", stories:[
+        { id:"S21.1", desc:"MOCK_LLM mode (brief + Scout) — no quota, repeatable", owner:"Lead", status:"done" },
+      ]},
+      { id:"E22", name:"Backend tests (pytest)", stories:[
+        { id:"S22.1", desc:"Unit: schemas, sources, ingestion, brief engine, render", owner:"Lead", status:"done" },
+        { id:"S22.2", desc:"API: health, companies, meeting→brief→toggle→chat, regen, delete", owner:"Lead", status:"done" },
+        { id:"S22.3", desc:"23 tests passing", owner:"Lead", status:"done" },
+      ]},
+      { id:"E23", name:"Playwright E2E (visual)", stories:[
+        { id:"S23.1", desc:"App shell + create-via-dialog + dashboard", owner:"Lead", status:"done" },
+        { id:"S23.2", desc:"Brief render → persona toggle → Scout, with screenshots", owner:"Lead", status:"done" },
+        { id:"S23.3", desc:"3/3 E2E passing (fresh MOCK_LLM servers)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E24", name:"Gate", stories:[
+        { id:"S24.1", desc:"pytest + npm build + Playwright required before every commit", owner:"Lead", status:"done" },
+      ]},
+    ]},
+  ]
+};
+
+const LABELS = { todo:"Not started", doing:"In progress", done:"Done", blocked:"Blocked" };
+
+function render() {
+  let total=0, done=0;
+  const board = document.getElementById("board");
+  board.innerHTML = "";
+  for (const ph of DATA.phases) {
+    let pTotal=0, pDone=0;
+    const sec = document.createElement("div"); sec.className="phase";
+    const hh = document.createElement("div"); hh.className="phase-h";
+    const h2 = document.createElement("h2"); h2.textContent = ph.name;
+    const cnt = document.createElement("span"); cnt.className="count";
+    hh.appendChild(h2); hh.appendChild(cnt); sec.appendChild(hh);
+    for (const ep of ph.epics) {
+      const ec = document.createElement("div"); ec.className="epic";
+      const eh = document.createElement("div"); eh.className="epic-h";
+      eh.innerHTML = `<div><span class="eid">${ep.id}</span><span class="name">${ep.name}</span></div>`;
+      ec.appendChild(eh);
+      const sl = document.createElement("div"); sl.className="stories";
+      for (const st of ep.stories) {
+        total++; pTotal++;
+        if (st.status==="done"){done++; pDone++;}
+        const row = document.createElement("div");
+        row.className = "story" + (st.status==="done"?" done":"");
+        row.innerHTML =
+          `<span class="sid">${st.id}</span>
+           <span class="desc">${st.desc}</span>
+           <span class="owner ow-${st.owner}">${st.owner}</span>
+           <span class="pill st-${st.status}"><span class="dot"></span>${LABELS[st.status]}</span>`;
+        sl.appendChild(row);
+      }
+      ec.appendChild(sl); sec.appendChild(ec);
+    }
+    cnt.textContent = `${pDone}/${pTotal} done`;
+    board.appendChild(sec);
+  }
+  const pct = total? Math.round(done/total*100):0;
+  document.getElementById("bar").style.width = pct+"%";
+  document.getElementById("plabel").textContent = `${done} of ${total} stories complete (${pct}%)`;
+  document.getElementById("meta").textContent = "Last updated: " + DATA.lastUpdated;
+}
+render();
+</script>
+</body>
+</html>

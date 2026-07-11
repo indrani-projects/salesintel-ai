@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SalesIntel — Product Workspace</title>
+<style>
+  :root{
+    --bg:#eef1f6; --panel:#ffffff; --ink:#111726; --muted:#5a6478; --faint:#8a93a6;
+    --line:#e5e9f0; --line2:#eef1f6; --accent:#3538cd; --accent-soft:#ecedfb;
+    --nav:#141a2e; --nav-ink:#c4cbdb; --good:#0f9d58; --warn:#c07d12; --bad:#d33a4b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.55;-webkit-font-smoothing:antialiased;font-size:15px}
+  .tag{background:var(--accent);color:#fff;font-size:11px;text-align:center;padding:6px;letter-spacing:.03em;font-weight:600}
+  .app{display:grid;grid-template-columns:236px 1fr;min-height:calc(100vh - 27px)}
+  /* sidebar */
+  .side{background:var(--nav);color:var(--nav-ink);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+  .logo{display:flex;align-items:center;gap:10px;color:#fff;font-weight:700;font-size:17px;letter-spacing:-.01em;padding:4px 8px 16px}
+  .logo .m{width:26px;height:26px;border-radius:8px;background:conic-gradient(from 210deg,#3538cd,#6d70ff,#3538cd)}
+  .nav{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:9px;font-size:14px;color:var(--nav-ink);cursor:pointer}
+  .nav .i{width:16px;height:16px;border:1.6px solid currentColor;border-radius:4px;opacity:.8}
+  .nav.on{background:rgba(109,112,255,.16);color:#fff}
+  .side .sp{flex:1}
+  .side .me{display:flex;align-items:center;gap:10px;padding:10px 8px;border-top:1px solid rgba(255,255,255,.08);font-size:13px}
+  .side .me .av{width:28px;height:28px;border-radius:50%;background:#3538cd;color:#fff;display:grid;place-items:center;font-size:12px;font-weight:700}
+
+  /* main */
+  .main{padding:22px 28px 60px;overflow:auto}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+  .crumb{font-size:13px;color:var(--muted)} .crumb b{color:var(--ink)}
+  .seg{display:flex;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:4px}
+  .seg button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;color:var(--muted);padding:8px 14px;border-radius:7px;cursor:pointer}
+  .seg button.on{background:var(--accent);color:#fff}
+
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+  .kpi .l{font-size:12px;color:var(--muted)} .kpi .v{font-size:22px;font-weight:750;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .d{font-size:11.5px;color:var(--good);margin-top:2px}
+
+  .grid{display:grid;grid-template-columns:1.7fr 1fr;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px 22px}
+  .hero .badge{display:inline-block;font-size:11.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:4px 11px}
+  .hero h1{font-size:26px;font-weight:750;letter-spacing:-.02em;margin:12px 0 6px;text-wrap:balance}
+  .hero .lede{color:#333c4e;font-size:15px;max-width:62ch}
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--good);background:#e7f6ee;border-radius:999px;padding:4px 10px;margin-top:12px}
+  .status .dot{width:7px;height:7px;border-radius:50%;background:var(--good)}
+
+  .sec{padding:16px 0;border-top:1px solid var(--line2)}
+  .sec .h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .sec .n{width:24px;height:24px;border-radius:7px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;display:grid;place-items:center}
+  .sec h2{font-size:15px;font-weight:700} .sec .cf{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:2px 8px;border-radius:999px}
+  .cf.hi{background:#e7f6ee;color:var(--good)} .cf.me{background:#fbf1de;color:var(--warn)}
+  .sec p{color:#333c4e;font-size:14.5px;margin-bottom:7px}
+  .cite{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:0 5px}
+  .mr{display:flex;gap:10px;padding:10px 12px;background:#f7f8fc;border:1px solid var(--line2);border-radius:10px;margin:7px 0;font-size:14px}
+  .mr .b{width:4px;border-radius:3px;background:var(--accent);flex:0 0 4px} .mr b{color:var(--accent)}
+
+  .scout{display:flex;flex-direction:column;padding:0;overflow:hidden}
+  .sc-h{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line)}
+  .sc-h .av{width:30px;height:30px;border-radius:9px;background:conic-gradient(from 210deg,#3538cd,#6d70ff);color:#fff;display:grid;place-items:center;font-weight:700}
+  .sc-h b{font-size:15px} .sc-h span{font-size:12px;color:var(--muted)}
+  .th{flex:1;display:flex;flex-direction:column;gap:10px;padding:16px 18px;max-height:300px;overflow:auto}
+  .msg{font-size:13.5px;padding:10px 13px;border-radius:12px;max-width:92%}
+  .msg.u{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:#f2f4f9;border-bottom-left-radius:4px}
+  .ask{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  .ask input{flex:1;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;font-size:13.5px;background:#fafbfe}
+  .ask button{border:0;background:var(--accent);color:#fff;border-radius:10px;padding:0 16px;font-weight:600;cursor:pointer}
+  @media(max-width:960px){.app{grid-template-columns:1fr}.side{display:none}.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="tag">DIRECTION C — PRODUCT WORKSPACE · app shell, KPI strip, flat indigo · the daily driver</div>
+<div class="app">
+  <nav class="side">
+    <div class="logo"><span class="m"></span>SalesIntel AI</div>
+    <div class="nav"><span class="i"></span>Calendar</div>
+    <div class="nav on"><span class="i"></span>Briefs</div>
+    <div class="nav"><span class="i"></span>Accounts</div>
+    <div class="nav"><span class="i"></span>Settings</div>
+    <div class="sp"></div>
+    <div class="me"><span class="av">RM</span><div>Rohan M.<br><span style="color:var(--faint);font-size:11px">Account Executive</span></div></div>
+  </nav>
+
+  <div class="main">
+    <div class="top">
+      <div class="crumb">Briefs / <b>The Sleep Company</b></div>
+      <div class="seg"><button class="on">Account Executive</button><button>Sales Development Rep</button><button>Solutions Engineer</button></div>
+    </div>
+
+    <div class="kpis">
+      <div class="kpi"><div class="l">ARR</div><div class="v">₹700 Cr</div><div class="d">▲ 60% YoY</div></div>
+      <div class="kpi"><div class="l">Last raise</div><div class="v">₹480 Cr</div><div class="d">Series D · Aug ’25</div></div>
+      <div class="kpi"><div class="l">Retail outlets</div><div class="v">150+</div><div class="d">45+ cities</div></div>
+      <div class="kpi"><div class="l">Offline mix</div><div class="v">70%</div><div class="d">of total sales</div></div>
+    </div>
+
+    <div class="grid">
+      <div class="card hero">
+        <span class="badge">Account Executive · Pre-Call Brief</span>
+        <h1>The Sleep Company</h1>
+        <p class="lede">Scaling past ₹700 Cr ARR with 70% of sales now offline — a unified omnichannel CRM plus automated post-purchase support is the clearest opening.</p>
+        <span class="status"><span class="dot"></span>Ready · 10 sources · 92% cited</span>
+
+        <div class="sec"><div class="h"><span class="n">1</span><h2>Company Snapshot</h2><span class="cf hi">High</span></div>
+          <p>SmartGRID comfort-tech, founded 2019, Mumbai <span class="cite">S4</span>. 150+ outlets, 10 lakh+ customers, 1,200+ staff <span class="cite">S5</span>.</p></div>
+
+        <div class="sec"><div class="h"><span class="n">2</span><h2>Financial &amp; Funding Health</h2><span class="cf hi">High</span></div>
+          <p>₹480 Cr Series D led by ChrysCapital &amp; 360 ONE <span class="cite">S6</span>; prior ₹184 Cr from Premji Invest <span class="cite">S7</span>.</p></div>
+
+        <div class="sec"><div class="h"><span class="n">5</span><h2>Pain Hypotheses → Zoho</h2><span class="cf me">Medium</span></div>
+          <div class="mr"><span class="b"></span><span><b>Fragmented data</b> — 70% offline + WooCommerce + marketplaces <span class="cite">S6</span> → <b>Zoho CRM</b> single customer view <span class="cite">S10</span>.</span></div>
+          <div class="mr"><span class="b"></span><span><b>Returns at scale</b> — 100-day trial + 10-yr warranty <span class="cite">S8</span> → <b>Zoho Desk</b> SLAs <span class="cite">S10</span>.</span></div>
+        </div>
+      </div>
+
+      <div class="card scout">
+        <div class="sc-h"><span class="av">◎</span><div><b>Scout</b><br><span>Ask anything about this account</span></div></div>
+        <div class="th">
+          <div class="msg u">Who led their last round?</div>
+          <div class="msg a">ChrysCapital &amp; 360 ONE — ₹480 Cr Series D <span class="cite">S6</span>.</div>
+          <div class="msg u">Are they on Salesforce today?</div>
+          <div class="msg a">Not in the sources — worth confirming on the call.</div>
+          <div class="msg u">Best opening line?</div>
+          <div class="msg a">Lead with the 150-store milestone and omnichannel data unification.</div>
+        </div>
+        <div class="ask"><input placeholder="Ask Scout…"/><button>Send</button></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,201 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* --------------------------------------------------------------------------
+   Direction C — Product Workspace design tokens (mirror mockups/C-workspace.html)
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #eef1f6;
+  --panel: #ffffff;
+  --ink: #111726;
+  --muted: #5a6478;
+  --faint: #8a93a6;
+  --line: #e5e9f0;
+  --line2: #eef1f6;
+  --accent: #3538cd;
+  --accent-soft: #ecedfb;
+  --nav: #141a2e;
+  --nav-ink: #c4cbdb;
+  --good: #0f9d58;
+  --warn: #c07d12;
+  --bad: #d33a4b;
+  color-scheme: light;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-ink-900 antialiased;
+    font-family:
+      system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+      sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  /* Tabular numerals for all KPI / numeric values. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-card border border-line bg-panel shadow-card;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-[10px] px-3.5 py-2 text-sm font-semibold
+      transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40
+      disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700;
+  }
+
+  .btn-secondary {
+    @apply btn border border-line bg-panel text-ink-700 hover:bg-ink-50;
+  }
+
+  .btn-ghost {
+    @apply btn text-ink-600 hover:bg-ink-100;
+  }
+
+  .input {
+    @apply w-full rounded-[10px] border border-line bg-[#fafbfe] px-3 py-2 text-sm text-ink-900
+      placeholder:text-faint focus:border-brand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-600/20;
+  }
+
+  .label {
+    @apply mb-1.5 block text-sm font-medium text-ink-700;
+  }
+
+  /* Small rounded pill used for statuses / eyebrows. */
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  /* Segmented control (persona toggle). */
+  .seg {
+    @apply inline-flex rounded-[10px] border border-line bg-panel p-1;
+  }
+  .seg-btn {
+    @apply rounded-[7px] px-3.5 py-2 text-[13px] font-semibold text-muted transition-colors
+      hover:text-ink-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40;
+  }
+  .seg-btn.on {
+    @apply bg-brand-600 text-white hover:text-white;
+  }
+}
+
+/* --- Markdown (prose) styling for briefs & chat --- */
+.md :where(h1, h2, h3) {
+  @apply font-semibold text-ink-900;
+}
+.md h2 {
+  @apply mt-4 mb-2 text-base;
+}
+.md h3 {
+  @apply mt-3 mb-1.5 text-sm;
+}
+.md p {
+  @apply my-2 leading-relaxed text-ink-700;
+}
+.md ul {
+  @apply my-2 ml-5 list-disc space-y-1 text-ink-700;
+}
+.md ol {
+  @apply my-2 ml-5 list-decimal space-y-1 text-ink-700;
+}
+.md a {
+  @apply text-brand-600 underline underline-offset-2 hover:text-brand-700;
+}
+.md strong {
+  @apply font-semibold text-ink-900;
+}
+.md code {
+  @apply rounded bg-ink-100 px-1.5 py-0.5 text-[0.85em] text-ink-800;
+}
+.md table {
+  @apply my-3 w-full border-collapse text-sm;
+}
+.md th,
+.md td {
+  @apply border border-line px-2.5 py-1.5 text-left;
+}
+.md th {
+  @apply bg-ink-50 font-semibold text-ink-800;
+}
+
+/* --- FullCalendar polish (neutral borders + indigo accent, no default purple) --- */
+.fc {
+  --fc-border-color: var(--line);
+  --fc-today-bg-color: #f4f5fe;
+  --fc-neutral-bg-color: var(--line2);
+  --fc-page-bg-color: transparent;
+  --fc-event-selected-overlay-color: rgba(53, 56, 205, 0.12);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.fc .fc-toolbar-title {
+  @apply text-lg font-semibold text-ink-900;
+}
+.fc .fc-button {
+  @apply border border-line bg-panel text-ink-700 shadow-none;
+  text-transform: capitalize;
+  font-weight: 600;
+  box-shadow: none;
+}
+.fc .fc-button-primary {
+  background-color: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active,
+.fc .fc-button-primary:not(:disabled):active {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.fc .fc-button-primary:hover {
+  background-color: var(--line2);
+  color: var(--ink);
+}
+.fc .fc-button-primary:not(:disabled).fc-button-active:hover {
+  background-color: var(--accent);
+  color: #fff;
+}
+.fc .fc-button-primary:focus,
+.fc .fc-button-primary:focus-visible {
+  box-shadow: 0 0 0 2px rgba(53, 56, 205, 0.35);
+}
+.fc .fc-col-header-cell-cushion {
+  @apply py-2 text-xs font-semibold uppercase tracking-wide text-muted;
+}
+.fc .fc-daygrid-day-number {
+  @apply px-2 py-1 text-sm text-ink-600;
+}
+.fc .fc-day-today .fc-daygrid-day-number {
+  @apply font-bold text-brand-700;
+}
+.fc .fc-event {
+  @apply cursor-pointer rounded-md border-0 px-1.5 py-0.5 text-xs font-medium;
+}
+.fc .fc-list-event:hover td {
+  background-color: var(--line2);
+}
+.fc-theme-standard td,
+.fc-theme-standard th {
+  border-color: var(--line);
+}

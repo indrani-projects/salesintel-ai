@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SalesIntel — Command Deck</title>
+<style>
+  :root{
+    --bg:#0a0b12; --bg2:#0f111b; --card:rgba(255,255,255,.04); --line:rgba(255,255,255,.08);
+    --ink:#e9ecf5; --muted:#8b93a7; --accent:#7c5cff; --accent2:#22d3ee; --glow:rgba(124,92,255,.35);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:
+      radial-gradient(900px 500px at 85% -10%,rgba(124,92,255,.18),transparent),
+      radial-gradient(700px 500px at -10% 110%,rgba(34,211,238,.12),transparent),
+      var(--bg);
+    color:var(--ink);font-family:"Inter",system-ui,-apple-system,sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;min-height:100vh}
+  .mono{font-family:"SF Mono",ui-monospace,"Cascadia Code",Consolas,monospace}
+  .sample{background:linear-gradient(90deg,#7c5cff,#22d3ee);color:#05060b;text-align:center;font-size:12px;font-weight:700;padding:6px;letter-spacing:.04em}
+  .wrap{max-width:1120px;margin:0 auto;padding:26px 24px 80px;display:grid;grid-template-columns:1fr 340px;gap:24px}
+  header.top{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+  .brand .dot{width:28px;height:28px;border-radius:9px;background:conic-gradient(from 200deg,#7c5cff,#22d3ee,#7c5cff);box-shadow:0 0 24px var(--glow)}
+  .toggle{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:5px;backdrop-filter:blur(8px)}
+  .toggle button{border:0;background:transparent;font:inherit;font-size:12.5px;font-weight:600;color:var(--muted);padding:8px 14px;border-radius:999px;cursor:pointer}
+  .toggle button.on{background:linear-gradient(180deg,rgba(124,92,255,.9),rgba(124,92,255,.7));color:#fff;box-shadow:0 4px 18px var(--glow)}
+
+  .card{background:var(--card);border:1px solid var(--line);border-radius:20px;backdrop-filter:blur(14px)}
+  main{padding:36px 40px}
+  .lbl{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent2)}
+  h1{font-size:32px;line-height:1.15;font-weight:700;margin:8px 0 8px;letter-spacing:-.02em}
+  .lede{font-size:16.5px;color:#c3c9da;max-width:60ch}
+  .chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .pill{font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 11px}
+  .pill.accent{color:#fff;border-color:transparent;background:linear-gradient(90deg,#7c5cff,#22d3ee)}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+  .tile{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:16px;padding:18px 18px}
+  .tile.span{grid-column:1/-1}
+  .tile h2{font-size:14px;letter-spacing:.02em;display:flex;align-items:center;gap:9px;margin-bottom:9px}
+  .tile .n{width:22px;height:22px;border-radius:7px;display:grid;place-items:center;font-size:12px;font-weight:700;color:#05060b;background:var(--accent2)}
+  .tile p{font-size:14px;color:#c3c9da;margin-bottom:8px}
+  .cite{font-size:11px;font-weight:700;color:#c4b5ff;background:rgba(124,92,255,.16);border:1px solid rgba(124,92,255,.3);border-radius:5px;padding:0 5px}
+  .maprow{border-left:2px solid var(--accent);padding:9px 12px;background:rgba(124,92,255,.06);border-radius:0 10px 10px 0;margin:8px 0;font-size:13.5px}
+  .maprow b{color:#c4b5ff}
+
+  aside{position:sticky;top:24px;align-self:start;height:fit-content;overflow:hidden}
+  .scout-h{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .scout-h .av{width:32px;height:32px;border-radius:10px;background:conic-gradient(from 200deg,#7c5cff,#22d3ee);display:grid;place-items:center;color:#05060b;font-weight:800}
+  .scout-h b{font-size:15px}.scout-h span{font-size:12px;color:var(--muted)}
+  .thread{padding:16px 18px;display:flex;flex-direction:column;gap:12px;max-height:360px;overflow:auto}
+  .msg{font-size:13.5px;padding:10px 13px;border-radius:13px;max-width:92%}
+  .msg.u{align-self:flex-end;background:linear-gradient(90deg,#7c5cff,#6d5cff);color:#fff;border-bottom-right-radius:4px}
+  .msg.a{align-self:flex-start;background:rgba(255,255,255,.05);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .ask{display:flex;gap:8px;padding:14px 16px;border-top:1px solid var(--line)}
+  .ask input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:11px;padding:10px 12px;font:inherit;font-size:13.5px;color:var(--ink)}
+  .ask input::placeholder{color:#6b7285}
+  .ask button{border:0;background:linear-gradient(90deg,#7c5cff,#22d3ee);color:#05060b;border-radius:11px;padding:0 16px;font-weight:700;cursor:pointer}
+  @media(max-width:900px){.wrap{grid-template-columns:1fr}.grid{grid-template-columns:1fr}aside{position:static}}
+</style>
+</head>
+<body>
+<div class="sample">DESIGN SAMPLE 2 — “Command Deck”: dark, glassmorphism, vivid accents · intelligence-terminal feel</div>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="dot"></span>SalesIntel&nbsp;AI</div>
+    <div class="toggle">
+      <button class="on">Account Executive</button>
+      <button>Sales Development Rep</button>
+      <button>Solutions Engineer</button>
+    </div>
+  </header>
+
+  <main class="card">
+    <div class="lbl mono">Account Executive · Pre-Call Brief</div>
+    <h1>The Sleep Company</h1>
+    <p class="lede">Scaling past ₹700 Cr ARR with 70% of sales now offline — a unified omnichannel CRM plus automated post-purchase support is the clearest opening.</p>
+    <div class="chips">
+      <span class="pill accent">Account Executive</span>
+      <span class="pill">The Sleep Company</span>
+      <span class="pill mono">Jul 15 · 10:30</span>
+      <span class="pill mono">10 sources · 92% cited</span>
+    </div>
+
+    <div class="grid">
+      <div class="tile"><h2><span class="n">1</span>Company Snapshot</h2><p>SmartGRID comfort-tech, founded 2019, Mumbai <span class="cite">S4</span>. 150+ outlets, 45+ cities, 10L+ customers <span class="cite">S5</span>.</p></div>
+      <div class="tile"><h2><span class="n">2</span>Funding Health</h2><p>₹700 Cr ARR, 60% YoY <span class="cite">S6</span>. ₹480 Cr Series D (ChrysCapital, 360 ONE) <span class="cite">S6</span>.</p></div>
+      <div class="tile span"><h2><span class="n">5</span>Pain Hypotheses → Zoho</h2>
+        <div class="maprow"><b>Signal→Pain:</b> 70% offline + WooCommerce + marketplaces <span class="cite">S6</span> ⇒ fragmented customer data. <b>→ Zoho CRM</b> single customer record <span class="cite">S10</span>.</div>
+        <div class="maprow"><b>Signal→Pain:</b> 100-day trial + 10-yr warranty <span class="cite">S8</span> ⇒ returns/claims at scale. <b>→ Zoho Desk</b> SLAs + automation <span class="cite">S10</span>.</div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="card">
+    <div class="scout-h"><span class="av">◎</span><div><b>Scout</b><br><span class="mono">grounded in 10 sources</span></div></div>
+    <div class="thread">
+      <div class="msg u">Who led their last round and how much?</div>
+      <div class="msg a">₹480 Cr Series&nbsp;D, led by ChrysCapital and 360&nbsp;ONE Asset <span class="cite">S6</span>.</div>
+      <div class="msg u">Do they use Salesforce today?</div>
+      <div class="msg a">Not stated in the sources — worth confirming on the call.</div>
+    </div>
+    <div class="ask"><input placeholder="Ask Scout…"/><button>Send</button></div>
+  </aside>
+</div>
+</body>
+</html>
