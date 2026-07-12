@@ -145,16 +145,22 @@ backend an SMTP account. Easiest is Gmail:
 
 ## 3. Start the app
 
-Open **two terminals**.
-
-**Terminal 1 — backend:**
+**One command (recommended)** — from the repo root:
 ```powershell
+.\stack.ps1            # start both servers; waits until healthy and prints the URLs
+.\stack.ps1 stop       # stop both cleanly (frees the ports)
+.\stack.ps1 status     # is each up?
+.\stack.ps1 restart    # stop + start
+```
+It runs the backend (:8000) and frontend (:5173) in the background, logging to
+`.logs\`. Nothing else to remember — this is the whole start/stop story.
+
+**Manual alternative (two terminals)** — if you want live console output:
+```powershell
+# Terminal 1 — backend
 cd backend
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-```
-
-**Terminal 2 — frontend:**
-```powershell
+# Terminal 2 — frontend
 cd frontend
 npm run dev
 ```
