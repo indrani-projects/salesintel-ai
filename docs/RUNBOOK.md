@@ -147,13 +147,15 @@ backend an SMTP account. Easiest is Gmail:
 
 **One command (recommended)** — from the repo root:
 ```powershell
-.\stack.ps1            # start both servers; waits until healthy and prints the URLs
-.\stack.ps1 stop       # stop both cleanly (frees the ports)
-.\stack.ps1 status     # is each up?
-.\stack.ps1 restart    # stop + start
+.\stack.ps1            # start LOCAL (backend :8000 + frontend :5173), waits, prints URLs
+.\stack.ps1 share      # start + open a PUBLIC tunnel (share mode); prints the share URL
+.\stack.ps1 stop       # stop everything (servers + tunnel), free the ports
+.\stack.ps1 status     # is each up? (+ the share URL, if any)
+.\stack.ps1 restart    # stop + start (local)
 ```
 It runs the backend (:8000) and frontend (:5173) in the background, logging to
-`.logs\`. Nothing else to remember — this is the whole start/stop story.
+`.logs\`. Nothing else to remember — one script does local **and** sharing. Public
+sharing setup (fixed URL, providers, troubleshooting) is in [`SHARING.md`](SHARING.md).
 
 **Manual alternative (two terminals)** — if you want live console output:
 ```powershell

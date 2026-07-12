@@ -2,4 +2,4 @@
 # (Windows CRLF on a #!/bin/sh script breaks it with "bad interpreter".)
 .githooks/* text eol=lf
 *.sh text eol=lf
-share-demo.ps1 text eol=crlf
+*.ps1 text eol=crlf

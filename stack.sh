@@ -94,5 +94,11 @@ case "${1:-start}" in
            else echo "Some ports still busy — run ./stack.sh stop again."; fi ;;
   restart) stop_stack; start_stack ;;
   status)  status ;;
-  *)       echo "usage: ./stack.sh [start|stop|restart|status]"; exit 1 ;;
+  share)   echo "Public sharing (tunnel) is wired up for Windows only: use  stack.ps1 share."
+           echo "On macOS/Linux, run share mode + a tunnel manually:"
+           echo "  (cd frontend && npm run dev:share) &            # frontend in share mode on :5173"
+           echo "  cloudflared tunnel --url http://localhost:5173  # or: ngrok http 5173"
+           echo "See docs/SHARING.md (one tunnel URL serves both app and API)."
+           exit 1 ;;
+  *)       echo "usage: ./stack.sh [start|stop|restart|status]  (share: Windows only)"; exit 1 ;;
 esac
