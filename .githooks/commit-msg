@@ -1,0 +1,15 @@
+#!/bin/sh
+# ---------------------------------------------------------------------------
+# commit-msg — guarantee the Claude co-author trailer on every commit.
+# Combined with the repo's git identity (user.name=indrani-projects,
+# user.email=indrani.patra.projects@gmail.com) this enforces the required
+# authorship automatically, so no commit can miss it. See the git-workflow skill.
+# ---------------------------------------------------------------------------
+msg_file="$1"
+
+if ! grep -qi 'Co-Authored-By:[[:space:]]*Claude' "$msg_file"; then
+  # Ensure a blank line separates the trailer block from the body.
+  printf '\nCo-Authored-By: Claude <noreply@anthropic.com>\n' >> "$msg_file"
+fi
+
+exit 0

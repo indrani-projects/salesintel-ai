@@ -1,0 +1,5 @@
+# Keep shell scripts and git hooks LF-only so they run on macOS/Linux clones.
+# (Windows CRLF on a #!/bin/sh script breaks it with "bad interpreter".)
+.githooks/* text eol=lf
+*.sh text eol=lf
+share-demo.ps1 text eol=crlf

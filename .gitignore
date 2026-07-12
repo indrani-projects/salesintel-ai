@@ -33,6 +33,9 @@ frontend/.last-run.json
 # Demo sharing (local ngrok domain / tunnel config — may be personal)
 share.config
 
+# Claude Code — keep shared config/skills/hooks, ignore personal overrides
+.claude/settings.local.json
+
 # OS / editor
 .DS_Store
 Thumbs.db
