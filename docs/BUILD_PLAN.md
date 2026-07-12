@@ -113,7 +113,7 @@ SalesIntel_AI/
       components/ MeetingDialog.tsx BriefCard.tsx ChatPanel.tsx
       lib/pdf.ts             # html2pdf.js export
     package.json
-  PROJECT_TRACKER.html       # visual epic/story tracker (created first, Lead-maintained)
+  docs/PROJECT_TRACKER.html  # visual epic/story tracker (created first, Lead-maintained)
 ```
 
 ## Execution model & environment
@@ -131,7 +131,7 @@ SalesIntel_AI/
 
 ## Project tracker (HTML)
 
-`PROJECT_TRACKER.html` at the repo root — a **self-contained, styled page you open
+`docs/PROJECT_TRACKER.html` — a **self-contained, styled page you open
 in a browser** (no server, no markdown wall). Table/kanban of every epic + story
 with: Owner (agent), Phase, and Status (`Not started` / `In progress` / `Done` /
 `Blocked`), plus a progress bar. **Created first (Story 0.2)** and updated by the

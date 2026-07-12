@@ -2,6 +2,8 @@
 
 Practical guide to set up, run, verify, and troubleshoot the app. For architecture
 see [`../CLAUDE.md`](../CLAUDE.md); for product framing see [`BUILD_PLAN.md`](BUILD_PLAN.md).
+To share a running instance with non-technical peers via a public link, see
+[`SHARING.md`](SHARING.md).
 
 The stack is two processes: a **FastAPI backend** (`:8000`) and a **Vite frontend**
 (`:5173`). SQLite is the only datastore (a file, `backend/salesintel.db`). All

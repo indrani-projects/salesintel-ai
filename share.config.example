@@ -1,0 +1,14 @@
+# Copy this file to `share.config` (same folder) and fill in your ngrok static
+# domain to get a FIXED public URL that never changes across restarts.
+#
+# One-time setup:
+#   1. Sign up free at https://ngrok.com and copy your authtoken.
+#   2. Run once:  ngrok config add-authtoken <YOUR_TOKEN>
+#   3. Claim your free static domain in the ngrok dashboard
+#      (Universal Gateway > Domains), e.g. sleep-demo.ngrok-free.app
+#   4. Put that domain below, then run:  npm run share   (from frontend\)
+#
+# If this is left unset, share-demo.ps1 falls back to a random (zero-setup)
+# Cloudflare quick-tunnel URL instead.
+
+NGROK_DOMAIN=

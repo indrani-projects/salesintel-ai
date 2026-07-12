@@ -210,6 +210,30 @@ class ChatMessageRead(BaseModel):
 
 
 # --------------------------------------------------------------------------- #
+# Email ("Send as email")
+# --------------------------------------------------------------------------- #
+class EmailPreview(BaseModel):
+    """The composed email for a persona brief, for in-app review before sending."""
+    subject: str
+    body_html: str                   # persona-tailored digest (inline-styled HTML)
+    attachment_filename: str         # the full brief attached as a .html file
+    recipient_default: str = ""      # prefills the To: field
+    email_configured: bool = False   # True → a real email will be sent on confirm
+
+
+class EmailSendRequest(BaseModel):
+    recipient: str
+
+
+class EmailSendResult(BaseModel):
+    delivered: bool                  # True only when a real email was actually sent
+    mode: str                        # "sent" | "demo" | "error"
+    recipient: str
+    subject: str
+    message: str                     # human-readable status for the UI
+
+
+# --------------------------------------------------------------------------- #
 # Misc
 # --------------------------------------------------------------------------- #
 class HealthResponse(BaseModel):

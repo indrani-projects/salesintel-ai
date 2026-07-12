@@ -235,6 +235,24 @@ const DATA = {
         { id:"S24.1", desc:"pytest + npm build + Playwright required before every commit", owner:"Lead", status:"done" },
       ]},
     ]},
+    { name:"Phase 6 — Send as Email (Format C, demo-send)", owner:"Lead", epics:[
+      { id:"E25", name:"Backend — compose & send", stories:[
+        { id:"S25.1", desc:"SMTP/mock_email/default_recipient settings + email_configured", owner:"Lead", status:"done" },
+        { id:"S25.2", desc:"Email DTOs (EmailPreview/SendRequest/SendResult)", owner:"Lead", status:"done" },
+        { id:"S25.3", desc:"email_service: persona-tailored digest + brief attachment", owner:"Lead", status:"done" },
+        { id:"S25.4", desc:"Real SMTP (stdlib) when configured, else demo-send; exception-safe", owner:"Lead", status:"done" },
+        { id:"S25.5", desc:"GET email/preview + POST email/send (409 until ready)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E26", name:"Frontend — button & dialog", stories:[
+        { id:"S26.1", desc:"types + client (getBriefEmailPreview / sendBriefEmail)", owner:"Frontend", status:"done" },
+        { id:"S26.2", desc:"EmailDialog: To field, iframe preview, attachment chip, confirm", owner:"Frontend", status:"done" },
+        { id:"S26.3", desc:"'Send as email' button per persona (brief toolbar)", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E27", name:"Verify", stories:[
+        { id:"S27.1", desc:"MOCK_EMAIL mode; pytest 30/30 (email service + API)", owner:"Lead", status:"done" },
+        { id:"S27.2", desc:"Playwright 4/4 incl. email compose→demo-send + screenshots", owner:"Lead", status:"done" },
+      ]},
+    ]},
   ]
 };
 

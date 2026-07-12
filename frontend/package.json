@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:share": "vite --mode share",
+    "share": "powershell -NoProfile -ExecutionPolicy Bypass -File ../share-demo.ps1",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

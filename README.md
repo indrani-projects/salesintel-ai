@@ -17,7 +17,7 @@ internal product knowledge* into an actual pre-sales angle.
 - **Ingestion** — PyMuPDF over the local `docs/<company>/` folder (stands in for live scraping)
 
 See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) for the full plan and
-[PROJECT_TRACKER.html](PROJECT_TRACKER.html) for build status.
+[docs/PROJECT_TRACKER.html](docs/PROJECT_TRACKER.html) for build status.
 
 ## Prerequisites
 
@@ -59,6 +59,15 @@ Open http://localhost:5173
 
 Changing the **agenda** shifts the brief's emphasis (e.g. support-scaling → Zoho
 Desk; pipeline → Zoho CRM), which shows the synthesis is real, not canned.
+
+## Accessing the app (shared link)
+
+No install needed. When the app owner shares a link (an `https://…` URL), just
+open it in any browser — the full app runs there: add a meeting, watch the brief
+generate, read the 9 sections, and chat with Scout, exactly as in the demo flow
+above. The link works only while the owner has the app running.
+
+> Running it yourself and want to share it with others? See **[docs/SHARING.md](docs/SHARING.md)**.
 
 ## Configuration (`backend/.env`)
 

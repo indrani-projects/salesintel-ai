@@ -38,6 +38,20 @@ class Settings(BaseSettings):
     # fast, repeatable, and don't consume Gemini free-tier quota.
     mock_llm: bool = False
 
+    # ---- Email ("Send as email") ----
+    # Real delivery happens only when SMTP is configured AND mock_email is off.
+    # With no SMTP creds (the default) the feature runs in "demo send": the email
+    # is composed + previewed + confirmed, but nothing leaves the machine.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""              # falls back to smtp_user when blank
+    default_recipient: str = ""      # prefills the dialog's To: field
+    # When true, force demo-send even if SMTP is configured — used by tests/E2E so
+    # verification never contacts a real mail server.
+    mock_email: bool = False
+
     @property
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -46,6 +60,19 @@ class Settings(BaseSettings):
     def llm_configured(self) -> bool:
         key = (self.llm_api_key or "").strip()
         return bool(key) and "PASTE" not in key
+
+    @property
+    def email_configured(self) -> bool:
+        """True when enough SMTP settings exist to attempt a real send."""
+        return bool(
+            self.smtp_host.strip()
+            and self.smtp_user.strip()
+            and self.smtp_password.strip()
+        )
+
+    @property
+    def email_from(self) -> str:
+        return (self.smtp_from or self.smtp_user).strip()
 
     @property
     def docs_root_path(self) -> Path:

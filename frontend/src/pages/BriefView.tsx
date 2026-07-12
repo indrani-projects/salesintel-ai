@@ -5,6 +5,7 @@ import {
   AlertTriangle,
   Download,
   Loader2,
+  Mail,
   ShieldAlert,
 } from "lucide-react";
 import { getBrief, getMeeting } from "../api/client";
@@ -12,6 +13,7 @@ import type { BriefSection, KeyFact, Persona } from "../api/types";
 import { downloadElementAsPdf, safeFilename } from "../lib/pdf";
 import { MarkdownView } from "../components/MarkdownView";
 import { ChatPanel } from "../components/ChatPanel";
+import { EmailDialog } from "../components/EmailDialog";
 import { CONFIDENCE_META, formatDateTime } from "../lib/format";
 import { PERSONAS, PERSONA_LABELS } from "../lib/persona";
 
@@ -78,6 +80,7 @@ export function BriefView() {
   const briefRef = useRef<HTMLDivElement>(null);
   const [downloading, setDownloading] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const { data: meeting } = useQuery({
     queryKey: ["meeting", meetingId],
@@ -156,17 +159,35 @@ export function BriefView() {
             })}
           </div>
           {ready && (
-            <button className="btn-primary" onClick={handleDownload} disabled={downloading}>
-              {downloading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4" />
-              )}
-              Download PDF
-            </button>
+            <>
+              <button
+                className="btn-secondary"
+                onClick={() => setEmailOpen(true)}
+              >
+                <Mail className="h-4 w-4" />
+                Send as email
+              </button>
+              <button className="btn-primary" onClick={handleDownload} disabled={downloading}>
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4" />
+                )}
+                Download PDF
+              </button>
+            </>
           )}
         </div>
       </div>
+
+      {ready && (
+        <EmailDialog
+          open={emailOpen}
+          onClose={() => setEmailOpen(false)}
+          meetingId={meetingId}
+          persona={viewPersona}
+        />
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_380px]">
         {/* Brief column */}

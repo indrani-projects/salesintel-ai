@@ -136,3 +136,19 @@ export interface HealthResponse {
   status: string;
   llm_configured: boolean;
 }
+
+export interface EmailPreview {
+  subject: string;
+  body_html: string;
+  attachment_filename: string;
+  recipient_default: string;
+  email_configured: boolean;
+}
+
+export interface EmailSendResult {
+  delivered: boolean;
+  mode: "sent" | "demo" | "error";
+  recipient: string;
+  subject: string;
+  message: string;
+}

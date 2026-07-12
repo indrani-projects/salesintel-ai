@@ -88,6 +88,50 @@ def test_regenerate(client):
     assert brief["status"] == "ready"
 
 
+def test_email_preview_and_demo_send(client):
+    m = _create(client)
+    _poll_brief(client, m["id"])  # ensure the AE brief is ready
+
+    prev = client.get(f"/meetings/{m['id']}/brief/email/preview")
+    assert prev.status_code == 200, prev.text
+    pj = prev.json()
+    assert "The Sleep Company" in pj["subject"]
+    assert "Account Executive" in pj["subject"]
+    assert pj["body_html"].strip()
+    assert pj["attachment_filename"].endswith("-ae-brief.html")
+    assert pj["email_configured"] is False  # MOCK_EMAIL → demo mode
+
+    send = client.post(
+        f"/meetings/{m['id']}/brief/email/send",
+        json={"recipient": "rep@zoho.com"},
+    )
+    assert send.status_code == 200, send.text
+    sj = send.json()
+    assert sj["delivered"] is False
+    assert sj["mode"] == "demo"
+    assert sj["recipient"] == "rep@zoho.com"
+
+
+def test_email_preview_persona_specific(client):
+    m = _create(client)
+    _poll_brief(client, m["id"], persona="sdr")  # lazily generate the SDR brief
+    prev = client.get(
+        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "sdr"}
+    )
+    assert prev.status_code == 200, prev.text
+    assert prev.json()["attachment_filename"].endswith("-sdr-brief.html")
+
+
+def test_email_preview_409_when_not_ready(client):
+    # A meeting whose non-primary persona brief has never been generated is
+    # "pending" → preview must refuse rather than compose a half-baked email.
+    m = _create(client, persona="ae")
+    r = client.get(
+        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "se"}
+    )
+    assert r.status_code == 409
+
+
 def test_delete_meeting(client):
     m = _create(client)
     assert client.delete(f"/meetings/{m['id']}").status_code == 204

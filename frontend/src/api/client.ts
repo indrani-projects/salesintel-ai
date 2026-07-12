@@ -4,13 +4,18 @@ import type {
   ChatMessageRead,
   ChatResponse,
   CompanyRead,
+  EmailPreview,
+  EmailSendResult,
   HealthResponse,
   MeetingCreate,
   MeetingRead,
   Persona,
 } from "./types";
 
-export const API_BASE_URL = "http://localhost:8000";
+// Default targets the local backend directly. For a shared/tunnelled demo, set
+// VITE_API_URL=/api so requests go same-origin through the Vite dev proxy
+// (see vite.config.ts) — that lets one tunnel URL serve both frontend + API.
+export const API_BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -65,5 +70,29 @@ export async function postChat(id: number, question: string): Promise<ChatRespon
 
 export async function getHealth(): Promise<HealthResponse> {
   const { data } = await api.get<HealthResponse>("/health");
+  return data;
+}
+
+export async function getBriefEmailPreview(
+  id: number,
+  persona?: Persona,
+): Promise<EmailPreview> {
+  const qs = persona ? `?persona=${persona}` : "";
+  const { data } = await api.get<EmailPreview>(
+    `/meetings/${id}/brief/email/preview${qs}`,
+  );
+  return data;
+}
+
+export async function sendBriefEmail(
+  id: number,
+  recipient: string,
+  persona?: Persona,
+): Promise<EmailSendResult> {
+  const qs = persona ? `?persona=${persona}` : "";
+  const { data } = await api.post<EmailSendResult>(
+    `/meetings/${id}/brief/email/send${qs}`,
+    { recipient },
+  );
   return data;
 }

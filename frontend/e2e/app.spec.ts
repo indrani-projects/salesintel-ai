@@ -70,9 +70,32 @@ test("brief view renders, toggles personas, and Scout answers", async ({ page })
   await expect(page.getByRole("heading", { name: /Demo Focus/ })).toBeVisible({ timeout: 20_000 });
   await page.screenshot({ path: `${SHOTS}/06-brief-se.png`, fullPage: true });
 
-  // Scout answers
+  // Scout answers ("Send" exact — distinct from the toolbar's "Send as email")
   await page.getByPlaceholder("Ask Scout…").fill("Who led their last round?");
-  await page.getByRole("button", { name: "Send" }).click();
+  await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByText(/Mock grounded answer/)).toBeVisible({ timeout: 20_000 });
   await page.screenshot({ path: `${SHOTS}/07-scout.png`, fullPage: true });
+});
+
+test("send-as-email composes a persona digest and demo-sends", async ({ page }) => {
+  const id = await seedMeeting("ae");
+  await page.goto(`/meeting/${id}`);
+  await expect(page.getByRole("heading", { name: "The Sleep Company", level: 1 })).toBeVisible();
+
+  // Open the email dialog from the brief toolbar.
+  await page.getByRole("button", { name: /send as email/i }).click();
+  const dialog = page.getByRole("dialog", { name: /send brief as email/i });
+  await expect(dialog).toBeVisible();
+
+  // Recipient prefilled, subject + attachment composed, preview rendered.
+  await expect(dialog.getByLabel("To")).not.toHaveValue("");
+  await expect(dialog.getByText(/Account Executive Brief/)).toBeVisible({ timeout: 20_000 });
+  await expect(dialog.getByText(/-ae-brief\.html/)).toBeVisible();
+  await expect(dialog.getByText(/Demo mode/)).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/08-email-dialog.png`, fullPage: true });
+
+  // Confirm → demo-send success.
+  await dialog.getByRole("button", { name: /confirm send/i }).click();
+  await expect(page.getByText(/Demo send complete/)).toBeVisible({ timeout: 20_000 });
+  await page.screenshot({ path: `${SHOTS}/09-email-sent.png`, fullPage: true });
 });

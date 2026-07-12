@@ -26,6 +26,7 @@ export default defineConfig({
       cwd: "../backend",
       env: {
         MOCK_LLM: "1",
+        MOCK_EMAIL: "1",
         DATABASE_URL: "sqlite:///./e2e_salesintel.db",
         LLM_API_KEY: "test-key",
       },

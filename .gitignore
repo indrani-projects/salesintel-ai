@@ -30,6 +30,9 @@ frontend/playwright-report/
 frontend/e2e/screenshots/
 frontend/.last-run.json
 
+# Demo sharing (local ngrok domain / tunnel config — may be personal)
+share.config
+
 # OS / editor
 .DS_Store
 Thumbs.db
