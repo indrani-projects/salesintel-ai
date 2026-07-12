@@ -11,6 +11,10 @@ PRs) — this skill governs *how the change is built and verified* before it shi
 
 ## 1. Plan
 
+- **Start by creating a branch off an up-to-date default branch (`main`)** — always
+  `git fetch origin && git checkout main && git pull --ff-only` first, then
+  `git checkout -b <type>/<slug>`. Never work on `main`, never branch from a stale
+  `main` (see `git-workflow` step 1).
 - Understand the request and the affected code first (read the seam files:
   `backend/app/schemas.py`, `backend/app/contracts.py`, `frontend/src/api/types.ts`).
 - For anything non-trivial, lay out the logical steps before writing code. Use plan
@@ -65,15 +69,20 @@ npx playwright test
 
 ## 6. Ship
 
-Only after the gate passes, follow **`git-workflow`**: feature branch → commit
-(author `indrani-projects` + `Co-Authored-By: Claude`, applied automatically) →
-push the branch → open a PR into `main`. Never commit or push to `main` directly.
+Follow **`git-workflow`** to ship. In order:
+1. **Rebase onto the latest `main` before raising the PR** so it's never stale:
+   `git fetch origin && git rebase origin/main` (resolve any conflicts).
+2. **Re-run the gate** (step 5 above) after the rebase — it can shift behavior.
+3. **Push** the branch (`git push --force-with-lease` if it was pushed pre-rebase).
+4. **Open a PR** into `main`. Never commit or push to `main` directly; commits are
+   authored `indrani-projects` + `Co-Authored-By: Claude` automatically.
 
 ## Quick checklist
 
+- [ ] Branched off an up-to-date `main`.
 - [ ] Planned the steps; scoped the code.
 - [ ] Delegated disjoint work to subagents (if parallelizable).
 - [ ] Implemented against the locked contracts.
 - [ ] Added/backfilled tests.
 - [ ] `pytest` green · `npm run build` green · Playwright E2E green (screenshots checked).
-- [ ] Shipped via a branch + PR (never straight to `main`).
+- [ ] Rebased onto latest `main`, re-ran the gate, then opened a PR (never straight to `main`).

@@ -35,11 +35,14 @@ git config core.hooksPath .githooks
 
 ## The workflow for every change
 
-1. **Start from an up-to-date main, on a new branch** — never work on `main`:
+1. **Always branch from the latest default branch (`main`)** — never work on `main`,
+   and never branch from a stale `main`. Fetch and fast-forward first:
    ```
-   git checkout main && git pull --ff-only
-   git checkout -b <type>/<slug>        # type = feat | fix | chore | docs | refactor
+   git fetch origin
+   git checkout main && git pull --ff-only     # main == origin/main
+   git checkout -b <type>/<slug>               # type = feat | fix | chore | docs | refactor
    ```
+   Equivalent one-liner: `git fetch origin && git checkout -b <type>/<slug> origin/main`.
    Example: `git checkout -b feat/email-attachments`
 
 2. **Do the work and commit** (as many logical commits as needed) on the branch.
@@ -53,19 +56,30 @@ git config core.hooksPath .githooks
    Before committing: never stage secrets (`.env`, `share.config`, keys). `.env` and
    `share.config` are git-ignored; keep it that way.
 
-3. **Push the branch** (not main):
+3. **Rebase onto the latest `main` BEFORE raising the PR** — the PR must never be
+   stale. Always **rebase** (keep history linear); do not merge `main` into the branch:
    ```
-   git push -u origin <type>/<slug>
+   git fetch origin
+   git rebase origin/main
+   # on conflicts: resolve, `git add <files>`, then `git rebase --continue`
+   ```
+   Then **re-run the verification gate** (dev-workflow §5) — a rebase can shift
+   behavior. Only continue when it's green.
+
+4. **Push the branch** (not `main`). After a rebase the branch history is rewritten,
+   so use `--force-with-lease` (safe — it refuses if someone else pushed meanwhile):
+   ```
+   git push --force-with-lease -u origin <type>/<slug>
    ```
 
-4. **Open a PR into `main`** — do not merge by pushing:
+5. **Open a PR into `main`** — do not merge by pushing:
    ```
    gh pr create --base main --head <type>/<slug> --title "..." --body "..."
    ```
    If `gh` isn't installed, open the "Create a pull request" URL that `git push`
    prints, or: `https://github.com/indrani-projects/salesintel-ai/compare/<branch>?expand=1`
 
-5. **After the PR is merged**, clean up:
+6. **After the PR is merged**, clean up:
    ```
    git checkout main && git pull --ff-only
    git branch -d <type>/<slug>
@@ -100,5 +114,7 @@ Escape hatch (rare, e.g. a one-time history fix): `SALESINTEL_ALLOW_MAIN=1 git p
 
 - `git commit` or `git push` while on `main`/`master`.
 - `git push origin main`, `git push --force origin main`, `HEAD:main`.
+- Branch from a stale `main`, or raise a PR without first rebasing onto `origin/main`.
+- Merge `main` into the feature branch (use rebase to keep history linear).
 - Commit with the machine's default identity, or without the Claude co-author.
 - Stage `.env`, `share.config`, or any credential.

@@ -310,19 +310,23 @@ npm run build
 ## 10. Git workflow (contributing)
 
 **`main` is protected — never commit or push to it directly.** Every change goes:
-feature branch (or worktree) → commit → push the branch → open a PR → merge.
+branch off the latest `main` → commit → **rebase onto latest `main`** → push → PR → merge.
 
 **One-time per clone:** `.\bootstrap.ps1` (or `./bootstrap.sh`) — enables the shared
 hooks and the `indrani-projects` commit identity. See §2 Step 6.
 
 **Per change:**
 ```powershell
-git checkout main; git pull --ff-only
-git checkout -b feat/<slug>          # types: feat | fix | chore | docs | refactor
-# ...work..., then:
+# 1. Always branch off an up-to-date main
+git fetch origin; git checkout main; git pull --ff-only
+git checkout -b feat/<slug>              # types: feat | fix | chore | docs | refactor
+# 2. ...work..., then commit (author + Claude co-author applied automatically):
 git add -A
-git commit -m "feat: short summary"  # author + Claude co-author applied automatically
-git push -u origin feat/<slug>
+git commit -m "feat: short summary"
+# 3. Rebase onto latest main BEFORE the PR (never stale), then re-run the gate:
+git fetch origin; git rebase origin/main
+# 4. Push (force-with-lease after a rebase) and open the PR:
+git push --force-with-lease -u origin feat/<slug>
 gh pr create --base main --head feat/<slug> --title "..." --body "..."
 ```
 
