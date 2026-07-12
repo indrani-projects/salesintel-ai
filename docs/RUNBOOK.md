@@ -101,6 +101,21 @@ npm install
 
 Setup is done. Continue to §3 to start the app.
 
+### Step 6 — Enable the git workflow (only if you'll commit changes)
+
+Not needed just to *run* the app. If you'll make code/doc changes, enable the
+repo's shared git hooks + commit identity **once per clone**, from the repo root:
+
+```powershell
+.\bootstrap.ps1        # macOS/Linux: ./bootstrap.sh
+```
+
+This sets `core.hooksPath=.githooks` (blocks direct pushes to `main`, auto-adds the
+Claude co-author trailer) and the `indrani-projects` commit identity. The full
+workflow — feature branch → commit → push → PR, never touching `main` directly — is
+defined in **`.claude/skills/git-workflow/SKILL.md`** (the `git-workflow` skill) and
+summarized in §10 below.
+
 ---
 
 ## 2b. Optional — real email sending (Gmail App Password)
@@ -289,3 +304,36 @@ npm run build
 | `DEFAULT_RECIPIENT` | — | Prefills the "To" box in the Send-as-email dialog |
 | `MOCK_LLM` | `false` | `true` → canned briefs/chat (tests/E2E; no key, no quota) |
 | `MOCK_EMAIL` | `false` | `true` → never contacts a real mail server (tests/E2E) |
+
+---
+
+## 10. Git workflow (contributing)
+
+**`main` is protected — never commit or push to it directly.** Every change goes:
+feature branch (or worktree) → commit → push the branch → open a PR → merge.
+
+**One-time per clone:** `.\bootstrap.ps1` (or `./bootstrap.sh`) — enables the shared
+hooks and the `indrani-projects` commit identity. See §2 Step 6.
+
+**Per change:**
+```powershell
+git checkout main; git pull --ff-only
+git checkout -b feat/<slug>          # types: feat | fix | chore | docs | refactor
+# ...work..., then:
+git add -A
+git commit -m "feat: short summary"  # author + Claude co-author applied automatically
+git push -u origin feat/<slug>
+gh pr create --base main --head feat/<slug> --title "..." --body "..."
+```
+
+**Enforcement in the repo:**
+| Mechanism | Effect |
+|---|---|
+| `.githooks/pre-push` | Rejects direct pushes to `main`/`master` (override: `SALESINTEL_ALLOW_MAIN=1`). |
+| `.githooks/commit-msg` | Auto-adds `Co-Authored-By: Claude`. |
+| git `user.*` | Author is always `indrani-projects <indrani.patra.projects@gmail.com>`. |
+
+> These git hooks are **client-side** — they protect anyone working in a local clone
+> that ran `bootstrap`. They do **not** stop edits made through the GitHub website or
+> API; blocking those requires server-side branch protection / rulesets (a paid or
+> public-repo feature). Full spec: `.claude/skills/git-workflow/SKILL.md`.
