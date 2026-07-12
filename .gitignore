@@ -36,6 +36,9 @@ share.config
 # Claude Code — keep shared config/skills/hooks, ignore personal overrides
 .claude/settings.local.json
 
+# stack.ps1 background logs + pid files
+.logs/
+
 # OS / editor
 .DS_Store
 Thumbs.db

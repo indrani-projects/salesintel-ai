@@ -114,29 +114,29 @@ cd $HOME\Documents\salesintel-ai\frontend
 npm install
 ```
 
-### Step 5 — Start both servers
+### Step 5 — Start both servers (one command)
 
-You need **two** PowerShell windows running at the same time — one per server.
-Leave both open while you use the app.
-
-**Window 1 — backend** (from the `backend` folder):
+From the **repo root**, run:
 ```powershell
-.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+.\stack.ps1            # starts backend + frontend, waits until healthy, prints the URLs
 ```
+(macOS/Linux: `./stack.sh`.) That's it — leave that window open. To stop everything:
+`.\stack.ps1 stop`. Other actions: `.\stack.ps1 status` / `.\stack.ps1 restart`.
 
-**Window 2 — frontend** (from the `frontend` folder):
-```powershell
-npm run dev
-```
+<details><summary>Prefer two manual terminals (live console output)?</summary>
+
+**Window 1 — backend** (from `backend`): `.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000`
+**Window 2 — frontend** (from `frontend`): `npm run dev`
+</details>
 
 ### Step 6 — Open the app
 
 Open **http://localhost:5173** in your browser. To confirm the AI key is wired up,
 open **http://localhost:8000/health** — it should show `"llm_configured": true`. If
 it says `false`, your key in `backend\.env` is missing or still the placeholder —
-fix it and restart Window 1.
+fix it and re-run `.\stack.ps1 restart`.
 
-Next time, you only repeat **Step 5** (both servers) — the setup steps are one-time.
+Next time, you only repeat **Step 5** (`.\stack.ps1`) — the setup steps are one-time.
 
 ## Demo flow
 
