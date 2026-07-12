@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:share": "vite --mode share",
-    "share": "powershell -NoProfile -ExecutionPolicy Bypass -File ../share-demo.ps1",
+    "share": "powershell -NoProfile -ExecutionPolicy Bypass -File ../stack.ps1 share",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview"

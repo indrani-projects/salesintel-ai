@@ -9,17 +9,22 @@ no infra, no build step. For general setup / run / troubleshooting see
 ## Quick start
 
 One command starts the backend, the frontend (in shared-demo mode), and a public
-tunnel:
+tunnel — the **`share` mode of the same `stack.ps1`** you use for local dev:
 
 ```powershell
-cd frontend
-npm run share          # or, from the repo root:  .\share-demo.ps1
+.\stack.ps1 share      # from the repo root  (or, from frontend\:  npm run share)
 ```
 
-It opens two server windows and prints (and copies to your clipboard) an
-`https://…` URL. Send that to anyone — they open it in a browser, nothing to
-install. The link is **live only while the command is running**; close the
-windows to take it offline.
+It runs everything in the background (logs in `.logs\`) and prints — and copies to
+your clipboard — an `https://…` URL. Send that to anyone; they open it in a browser,
+nothing to install. Take it offline (servers **and** tunnel) with:
+
+```powershell
+.\stack.ps1 stop
+```
+
+The link is live only while the stack is up. (`stack.ps1` without `share` is the same
+app **local only**, no tunnel — see [`RUNBOOK.md`](RUNBOOK.md) §3.)
 
 Requirements while sharing:
 - A real `LLM_API_KEY` in `backend/.env` (or briefs land in `status=error`).
@@ -47,12 +52,12 @@ static domain**:
    # then edit share.config:  NGROK_DOMAIN=sleep-demo.ngrok-free.app
    ```
 
-Now every `npm run share` serves that **same URL, forever**. `share.config` is
+Now every `.\stack.ps1 share` serves that **same URL, forever**. `share.config` is
 gitignored (it's yours). You can also override per-run without the file:
 
 ```powershell
-.\share-demo.ps1 -Domain sleep-demo.ngrok-free.app
-.\share-demo.ps1 -Provider cloudflare      # force the random tunnel even if ngrok is set up
+.\stack.ps1 share -Domain sleep-demo.ngrok-free.app
+.\stack.ps1 share -Provider cloudflare      # force the random tunnel even if ngrok is set up
 ```
 
 **Heads-up:** ngrok's free tier shows visitors a one-time "Visit Site"
@@ -87,7 +92,7 @@ sections) → Scout answers — with **zero requests hitting localhost**.
 
 | Thing | Where |
 |---|---|
-| Launcher | `share-demo.ps1` (repo root); `npm run share` alias in `frontend/package.json` |
+| Launcher | `stack.ps1 share` (repo root); `npm run share` alias in `frontend/package.json` |
 | Share-mode env | `frontend/.env.share` (`VITE_API_URL=/api`); script `dev:share` |
 | Fixed-domain config | `share.config` (gitignored); template `share.config.example` |
 | Tunnel binaries | `%USERPROFILE%\bin\cloudflared.exe`, `%USERPROFILE%\bin\ngrok.exe` |

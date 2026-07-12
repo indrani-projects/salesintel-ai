@@ -8,7 +8,7 @@
 #      (Universal Gateway > Domains), e.g. sleep-demo.ngrok-free.app
 #   4. Put that domain below, then run:  npm run share   (from frontend\)
 #
-# If this is left unset, share-demo.ps1 falls back to a random (zero-setup)
+# If this is left unset, `stack.ps1 share` falls back to a random (zero-setup)
 # Cloudflare quick-tunnel URL instead.
 
 NGROK_DOMAIN=
