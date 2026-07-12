@@ -155,6 +155,11 @@ backend an SMTP account. Easiest is Gmail:
 It runs the backend (:8000) and frontend (:5173) in the background, logging to
 `.logs\`. Nothing else to remember — this is the whole start/stop story.
 
+> **Local only.** `stack.ps1` / `stack.sh` run the app on `localhost`. Exposing a
+> running instance **publicly** over a tunnel is a **separate** script —
+> `npm run share` (or `share-demo.ps1`); see [`SHARING.md`](SHARING.md). The two are
+> intentionally kept apart (local dev vs. public sharing).
+
 **Manual alternative (two terminals)** — if you want live console output:
 ```powershell
 # Terminal 1 — backend

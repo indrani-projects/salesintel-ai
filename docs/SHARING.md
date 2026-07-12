@@ -4,6 +4,12 @@ How to give non-technical peers a public link to the app running on your machine
 no infra, no build step. For general setup / run / troubleshooting see
 [`RUNBOOK.md`](RUNBOOK.md); for what the app is, [`../README.md`](../README.md).
 
+> **Local dev vs. sharing — two separate scripts (by design).** For plain local
+> development use **`stack.ps1`** (Windows) / **`stack.sh`** (macOS/Linux) — runs on
+> `localhost` only (see [`RUNBOOK.md`](RUNBOOK.md) §3). This doc / **`share-demo.ps1`**
+> (`npm run share`) is the separate path that runs the app in *share mode* **and**
+> opens a public tunnel. `stack.ps1` does **not** start ngrok.
+
 ---
 
 ## Quick start
