@@ -11,44 +11,120 @@ commands below are PowerShell on Windows.
 
 ---
 
-## 1. Prerequisites
+## 1. Prerequisites (install once)
 
-| Need | Check | Get it |
+You need three free tools. Open **PowerShell** (Windows key → type "PowerShell" →
+Enter) and install each; approve any Windows permission prompt:
+
+```powershell
+winget install Git.Git
+winget install Python.Python.3.12
+winget install OpenJS.NodeJS.LTS
+```
+
+**Close PowerShell and open a new window**, then confirm each prints a version:
+
+| Need | Check command | Expected |
 |---|---|---|
-| Python 3.12+ | `python --version` | `winget install Python.Python.3.12` |
-| Node.js LTS | `node --version` | `winget install OpenJS.NodeJS.LTS` |
-| LLM API key | — | Gemini free key at https://aistudio.google.com/apikey |
+| Git | `git --version` | `git version 2.x` |
+| Python 3.12+ | `python --version` | `Python 3.12.x` |
+| Node.js LTS | `node --version` | `v20.x` or newer |
+| npm | `npm --version` | `10.x` or newer |
 
-> If `node`/`npm` are "not recognized" in a fresh terminal, refresh PATH first:
+> If `python`/`node`/`npm` are "not recognized" even in a fresh terminal, refresh
+> PATH once, then retry:
 > ```powershell
 > $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 > ```
 
+You also need a **free Gemini API key** (obtained in §2, step 4). No credit card.
+
 ---
 
-## 2. First-time setup
+## 2. First-time setup (from a fresh clone)
 
-**Backend** — a virtualenv is already checked in at `backend/.venv`. Verify deps
-and create the `.env`:
+A clone from GitHub contains **only source code** — it deliberately does **not**
+include the Python virtualenv (`backend/.venv`) or the secret `backend/.env`. You
+create both here. This is a one-time process; day-to-day you only do §3.
+
+### Step 1 — Get the code
+
+```powershell
+cd $HOME\Documents
+git clone https://github.com/indrani-projects/salesintel-ai.git
+cd salesintel-ai
+```
+(Least-technical alternative: on the GitHub page click **Code → Download ZIP**,
+extract it, then `cd` into the extracted folder. Git clone is preferred.)
+
+### Step 2 — Create the Python environment and install backend dependencies
 
 ```powershell
 cd backend
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt   # only if venv is stale/missing
-Copy-Item .env.example .env
+python -m venv .venv                                             # creates backend\.venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt    # installs FastAPI, PyMuPDF, etc. (~1 min)
 ```
+The rest of this guide always calls Python as `.\.venv\Scripts\python.exe` so you
+never have to "activate" the environment.
 
-Then edit `backend/.env` and set your key:
-```
-LLM_API_KEY=<your-gemini-key>
-```
-`.env` is gitignored — never commit it. Without a real key the server still starts,
-but every brief lands in `status=error`.
+### Step 3 — Create your `.env` from the template
 
-**Frontend** — install packages:
 ```powershell
-cd frontend
+Copy-Item .env.example .env      # PowerShell copy; the Unix `cp .env.example .env` also works
+```
+This creates `backend\.env` (git-ignored — it holds secrets and is never uploaded).
+`.env.example` stays as the committed template.
+
+### Step 4 — Get a free Gemini API key and paste it in
+
+1. Open **https://aistudio.google.com/apikey** and **sign in** with any Google account.
+2. Click **Create API key → Create API key in new project**.
+3. **Copy** the generated key.
+4. Open the env file: `notepad .env`
+5. Replace the placeholder on the `LLM_API_KEY=` line:
+   ```
+   LLM_API_KEY=AIza...paste-your-actual-key...
+   ```
+6. **Save** (Ctrl+S) and close Notepad.
+
+Without a real key the server still starts, but every brief lands in `status=error`.
+The default `LLM_MODEL=gemini-flash-lite-latest` works with a fresh free key; if you
+ever see a 404 "model not found", pick a current model from AI Studio and update
+that line.
+
+### Step 5 — Install the frontend packages
+
+```powershell
+cd ..\frontend
 npm install
 ```
+
+Setup is done. Continue to §3 to start the app.
+
+---
+
+## 2b. Optional — real email sending (Gmail App Password)
+
+The brief's **Send as email** button works with **no setup** (demo-send: it composes
+and previews the email but doesn't deliver). To send a **real** email, give the
+backend an SMTP account. Easiest is Gmail:
+
+1. Turn on **2-Step Verification**: https://myaccount.google.com/security (required
+   before app passwords exist).
+2. Create an **App Password**: https://myaccount.google.com/apppasswords → name it
+   "SalesIntel" → **Create** → copy the **16-character** code (a normal Gmail
+   password will NOT work over SMTP).
+3. Edit `backend\.env` and fill in:
+   ```
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your.address@gmail.com
+   SMTP_PASSWORD=your16charapppassword     # the App Password, no spaces
+   SMTP_FROM=your.address@gmail.com
+   DEFAULT_RECIPIENT=who.should.get.it@example.com   # prefills the "To" box
+   ```
+4. Restart the backend. Now clicking **Send as email → Confirm** delivers a real
+   message. Leave `SMTP_*` blank to stay in safe demo-send mode.
 
 ---
 
@@ -168,8 +244,13 @@ npm run build
 | DELETE | `/meetings/{id}` | Delete meeting + its brief + chat |
 | POST | `/meetings/{id}/brief/regenerate` | Reset + regenerate brief |
 | GET | `/meetings/{id}/brief` | Brief status / content / HTML / error |
+| GET | `/meetings/{id}/brief/email/preview` | Compose the persona email (preview only, no send) |
+| POST | `/meetings/{id}/brief/email/send` | Send (real if SMTP set, else demo-send) |
 | POST | `/meetings/{id}/chat` | Ask a grounded question (brief must be `ready`) |
 | GET | `/meetings/{id}/chat` | Chat history |
+
+> Brief endpoints take an optional `?persona=ae|sdr|se` (defaults to the meeting's
+> primary persona).
 
 ---
 
@@ -185,6 +266,10 @@ npm run build
 | Generation very slow (minutes) | A reasoning-heavy model without `reasoning_effort` support. `brief_engine` sets `reasoning_effort="low"` for Gemini; other providers ignore it. |
 | `node`/`npm` not found | Refresh PATH (see Prerequisites) or reopen the terminal. |
 | Port already in use | Change `--port` (backend) or run `npm run dev -- --port <n>` (frontend); keep `CORS_ORIGINS` / client base URL in sync. |
+| `.\.venv\Scripts\python.exe` not found (fresh clone) | You skipped the venv step — a clone has no `.venv`. Run §2 Step 2: `python -m venv .venv` then `pip install -r requirements.txt`. |
+| Brief errors with 404 "model not found" | `LLM_MODEL` was retired. Set a current model in `backend/.env` (default `gemini-flash-lite-latest`) and restart. |
+| "Send as email" says *demo send, not delivered* | Expected with no SMTP configured. To send for real, fill `SMTP_*` in `.env` (see §2b) and restart. |
+| Real email fails to send | Wrong/again-needed Gmail **App Password** (not your normal password), or 2-Step Verification off. Re-check §2b; the error text is shown in the dialog. |
 
 ---
 
@@ -193,8 +278,14 @@ npm run build
 | Var | Default | Purpose |
 |---|---|---|
 | `LLM_BASE_URL` | Gemini OpenAI-compat endpoint | LLM provider endpoint |
-| `LLM_MODEL` | `gemini-2.5-flash` | Model name |
+| `LLM_MODEL` | `gemini-flash-lite-latest` | Model name |
 | `LLM_API_KEY` | — | Provider key (**required** for briefs) |
 | `DATABASE_URL` | `sqlite:///./salesintel.db` | SQLite file (relative to `backend/`) |
 | `DOCS_ROOT` | `../docs` | Source-docs root (relative to `backend/`) |
 | `CORS_ORIGINS` | `localhost:5173,127.0.0.1:5173` | Comma-separated allowed frontend origins |
+| `SMTP_HOST` / `SMTP_PORT` | — / `587` | Mail server for real email (blank → demo-send). See §2b |
+| `SMTP_USER` / `SMTP_PASSWORD` | — | Login for real send (Gmail: an **App Password**) |
+| `SMTP_FROM` | = `SMTP_USER` | "From" address on sent mail |
+| `DEFAULT_RECIPIENT` | — | Prefills the "To" box in the Send-as-email dialog |
+| `MOCK_LLM` | `false` | `true` → canned briefs/chat (tests/E2E; no key, no quota) |
+| `MOCK_EMAIL` | `false` | `true` → never contacts a real mail server (tests/E2E) |
