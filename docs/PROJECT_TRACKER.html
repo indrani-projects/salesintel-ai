@@ -253,6 +253,49 @@ const DATA = {
         { id:"S27.2", desc:"Playwright 4/4 incl. email compose→demo-send + screenshots", owner:"Lead", status:"done" },
       ]},
     ]},
+    { name:"Phase 7 — Engineering Workflow & Tooling", owner:"Lead", epics:[
+      { id:"E28", name:"One-command stack", stories:[
+        { id:"S28.1", desc:"stack.ps1 / stack.sh — start/stop/status/restart, detached, tree-kill (no orphans)", owner:"Lead", status:"done" },
+        { id:"S28.2", desc:"stack.ps1 share — share mode + ngrok/Cloudflare tunnel (consolidated share-demo.ps1)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E29", name:"Git workflow standard", stories:[
+        { id:"S29.1", desc:".githooks: pre-push blocks main, commit-msg auto co-author; git-workflow skill", owner:"Lead", status:"done" },
+        { id:"S29.2", desc:"bootstrap.ps1/.sh + core.hooksPath; branch → rebase → PR, never direct to main", owner:"Lead", status:"done" },
+      ]},
+      { id:"E30", name:"Dev workflow + hygiene", stories:[
+        { id:"S30.1", desc:"dev-workflow skill: plan → delegate → tests → gate → ship", owner:"Lead", status:"done" },
+        { id:"S30.2", desc:"Author indrani-projects + Co-Authored-By Claude; secret guards (.env, client_secret_*)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 8 — Google Workspace Integration (one OAuth)", owner:"Lead", epics:[
+      { id:"E31", name:"OAuth foundation", stories:[
+        { id:"S31.1", desc:"One consent (gmail.send + calendar.events); GoogleToken store; /auth/google/*; mock_google", owner:"Lead", status:"done" },
+        { id:"S31.2", desc:"PKCE disabled for stateless web callback (fixed 'Missing code verifier')", owner:"Lead", status:"done" },
+      ]},
+      { id:"E32", name:"Gmail send + Calendar sync", stories:[
+        { id:"S32.1", desc:"Send brief email from connected Gmail (prefers Gmail → SMTP → demo)", owner:"Lead", status:"done" },
+        { id:"S32.2", desc:"Calendar: import prospect events → briefs (dedup); push app meetings → events", owner:"Lead", status:"done" },
+        { id:"S32.3", desc:"Meeting.google_event_id + idempotent SQLite column migration", owner:"Lead", status:"done" },
+      ]},
+      { id:"E33", name:"Settings UI + verify", stories:[
+        { id:"S33.1", desc:"Settings page (connect/sync/disconnect) + Calendar 'Sync Google' button", owner:"Frontend", status:"done" },
+        { id:"S33.2", desc:"MOCK_GOOGLE; pytest 35/35 + Playwright 5/5; live OAuth verified end-to-end", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 9 — Web-First Prospect Intel (generic, on-demand)", owner:"Lead", epics:[
+      { id:"E34", name:"Web sources + cache", stories:[
+        { id:"S34.1", desc:"web_sources: keyless Google News RSS + SEC EDGAR + Reddit; keyword filter; fail-soft", owner:"Lead", status:"done" },
+        { id:"S34.2", desc:"Filtered-intel 24h TTL cache — no LLM, 0 extra Gemini calls", owner:"Lead", status:"done" },
+      ]},
+      { id:"E35", name:"Web-first seam", stories:[
+        { id:"S35.1", desc:"load_company_intel: web-first, docs fallback, zoho always; company NAME threaded", owner:"Lead", status:"done" },
+        { id:"S35.2", desc:"Generic for ANY company; free-text company dialog; 5-target hints", owner:"Lead", status:"done" },
+      ]},
+      { id:"E36", name:"Verify", stories:[
+        { id:"S36.1", desc:"MOCK_WEB; pytest 40/40 + Playwright 5/5 (Freshworks web-only meeting)", owner:"Lead", status:"done" },
+        { id:"S36.2", desc:"Live fetch confirmed real news + SEC filings for Freshworks", owner:"Lead", status:"done" },
+      ]},
+    ]},
   ]
 };
 

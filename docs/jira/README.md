@@ -1,7 +1,7 @@
 # SalesIntel AI — MVP 1 Jira Backlog (demo pack)
 
 This folder is a **paste-ready Jira backlog** for the SalesIntel AI POC. It re-frames
-everything that was actually built into **8 product epics and 37 stories**, so a PM can
+everything that was actually built into **11 product epics and 51 stories**, so a PM can
 copy each file straight into Jira (Epic → Stories) with no translation.
 
 > **What this is:** a back-fill of already-delivered work into a clean, capability-shaped
@@ -30,6 +30,9 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-6** | Brief Delivery: Web View & Email | `06-brief-delivery-email/` | 5 | High |
 | **SI-7** | Application Experience & Visual Design | `07-app-experience-design/` | 5 | Medium |
 | **SI-8** | Quality, Testing & Demo Readiness | `08-quality-testing-demo/` | 5 | High |
+| **SI-9** | Engineering Workflow & Tooling | `09-engineering-workflow-tooling/` | 5 | High |
+| **SI-10** | Google Workspace Integration (Gmail + Calendar) | `10-google-integration/` | 4 | High |
+| **SI-11** | Web-First Prospect Intel (generic, on-demand) | `11-web-prospect-intel/` | 4 | High |
 
 ## The product in one paragraph
 
@@ -44,8 +47,8 @@ pre-sales angle, tailored per sales persona (AE / SDR / SE), delivered on screen
 These are documented design choices for a fast, cheap hypothesis test, each with a named scale path:
 
 - **No vector DB** — all source text is stuffed into one LLM call (RAG is the scale path).
-- **Local `docs/` folder** instead of live LinkedIn/News/Crunchbase scraping.
+- **Web-first prospect intel** (Google News RSS / SEC EDGAR / Reddit — keyword-filtered + cached, **no extra LLM call**) with a **local `docs/` fallback**. SI-11 reversed the original "local docs only" shortcut; live LinkedIn/Crunchbase scraping stays out of scope.
 - **SQLite** (SQLModel) instead of Postgres.
 - **FastAPI BackgroundTasks** instead of a job queue.
-- **MOCK_LLM / MOCK_EMAIL** modes for repeatable, quota-free demos and hermetic CI.
-- **Demo-send email** by default (real SMTP is opt-in via `.env`).
+- **MOCK_LLM / MOCK_EMAIL / MOCK_GOOGLE / MOCK_WEB** modes for repeatable, quota-free, network-free demos and hermetic CI.
+- **Demo-send email** by default (real send is opt-in — SMTP `.env`, or the rep's Gmail via Google OAuth in SI-10).
