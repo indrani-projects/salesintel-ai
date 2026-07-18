@@ -6,7 +6,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import briefs, chat, meetings
+from app.api import briefs, chat, google, meetings
 from app.config import settings
 from app.db import init_db
 from app.schemas import HealthResponse
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(meetings.router)
 app.include_router(briefs.router)
 app.include_router(chat.router)
+app.include_router(google.router)
 
 
 @app.on_event("startup")

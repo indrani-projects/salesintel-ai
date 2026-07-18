@@ -71,6 +71,8 @@ export interface MeetingRead {
   created_at: string;
   brief_status: BriefStatus;
   persona: Persona;
+  google_event_id?: string | null;
+  google_html_link?: string | null;
 }
 
 export interface BriefSource {
@@ -147,8 +149,23 @@ export interface EmailPreview {
 
 export interface EmailSendResult {
   delivered: boolean;
-  mode: "sent" | "demo" | "error";
+  mode: "sent" | "demo" | "error" | "gmail";
   recipient: string;
   subject: string;
+  message: string;
+}
+
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email?: string | null;
+  scopes: string[];
+}
+
+export interface CalendarSyncResult {
+  imported: number;
+  briefed: number;
+  skipped_existing: number;
+  scanned: number;
   message: string;
 }

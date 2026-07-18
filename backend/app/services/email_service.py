@@ -156,7 +156,10 @@ def brief_html_for(brief: BriefContent) -> str:
 
 
 def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult:
-    """Send for real when SMTP is configured and mock_email is off; else demo-send."""
+    """Send via Gmail (if the user connected Google), else SMTP (if configured),
+    else demo-send. `mock_email` forces demo regardless (tests/E2E)."""
+    from app.services import google_service
+
     recipient = (recipient or "").strip()
     if not recipient:
         return EmailSendResult(
@@ -167,7 +170,42 @@ def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult
             message="No recipient address was provided.",
         )
 
-    should_send = settings.email_configured and not settings.mock_email
+    use_gmail = google_service.is_connected() and not settings.mock_email
+    use_smtp = settings.email_configured and not settings.mock_email
+
+    # Preferred path: send as the connected Gmail account.
+    if use_gmail:
+        try:
+            google_service.send_message(
+                to=recipient,
+                subject=composed.subject,
+                html=composed.body_html,
+                plain=composed.plain_text,
+                attachment_bytes=composed.attachment_bytes,
+                attachment_filename=composed.attachment_filename,
+            )
+        except Exception as exc:  # noqa: BLE001
+            if not use_smtp:  # no fallback available
+                return EmailSendResult(
+                    delivered=False, mode="error", recipient=recipient,
+                    subject=composed.subject,
+                    message=f"Gmail send failed: {exc}",
+                )
+        else:
+            delivered = not settings.mock_google
+            return EmailSendResult(
+                delivered=delivered,
+                mode="gmail",
+                recipient=recipient,
+                subject=composed.subject,
+                message=(
+                    f"Brief emailed to {recipient} from your Gmail."
+                    if delivered
+                    else f"Gmail send simulated (mock) for {recipient}."
+                ),
+            )
+
+    should_send = use_smtp
     if not should_send:
         return EmailSendResult(
             delivered=False,

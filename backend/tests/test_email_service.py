@@ -61,3 +61,16 @@ def test_send_rejects_empty_recipient():
     result = email_service.send_brief_email(composed, "   ")
     assert result.delivered is False
     assert result.mode == "error"
+
+
+def test_send_prefers_gmail_when_google_connected(monkeypatch):
+    # With a connected Google account (mock) and email delivery enabled, the send
+    # should route through Gmail (mode="gmail"), not SMTP/demo.
+    from app.config import settings as s
+
+    monkeypatch.setattr(s, "mock_email", False)   # allow real delivery path
+    monkeypatch.setattr(s, "mock_google", True)   # "connected" + Gmail is a no-op
+    composed = email_service.compose_brief_email(_brief("sdr"))
+    result = email_service.send_brief_email(composed, "rep@zoho.com")
+    assert result.mode == "gmail"
+    assert result.recipient == "rep@zoho.com"

@@ -1,0 +1,169 @@
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  AlertTriangle,
+  CalendarCheck,
+  CheckCircle2,
+  Loader2,
+  Mail,
+  RefreshCw,
+  Unplug,
+} from "lucide-react";
+import {
+  disconnectGoogle,
+  getGoogleStatus,
+  googleLoginUrl,
+  syncGoogleCalendar,
+} from "../api/client";
+import type { CalendarSyncResult } from "../api/types";
+
+export function SettingsPage() {
+  const qc = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const [banner, setBanner] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [sync, setSync] = useState<CalendarSyncResult | null>(null);
+
+  const { data: status, isLoading } = useQuery({
+    queryKey: ["google-status"],
+    queryFn: getGoogleStatus,
+    refetchOnWindowFocus: true,
+  });
+
+  // React to the OAuth callback redirect (?google=connected|error).
+  useEffect(() => {
+    const g = params.get("google");
+    if (!g) return;
+    if (g === "connected") setBanner({ kind: "ok", text: "Google account connected." });
+    if (g === "error") setBanner({ kind: "err", text: "Could not connect Google — please try again." });
+    qc.invalidateQueries({ queryKey: ["google-status"] });
+    params.delete("google");
+    setParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const syncMutation = useMutation({
+    mutationFn: syncGoogleCalendar,
+    onSuccess: (res) => {
+      setSync(res);
+      qc.invalidateQueries({ queryKey: ["meetings"] });
+    },
+  });
+
+  const disconnectMutation = useMutation({
+    mutationFn: disconnectGoogle,
+    onSuccess: () => {
+      setSync(null);
+      setBanner(null);
+      qc.invalidateQueries({ queryKey: ["google-status"] });
+    },
+  });
+
+  const connected = !!status?.connected;
+  const configured = !!status?.configured;
+
+  return (
+    <div className="max-w-3xl">
+      <h1 className="text-[22px] font-bold tracking-tight text-ink-900">Settings</h1>
+      <p className="mt-1 text-sm text-muted">Connect the tools SalesIntel works with.</p>
+
+      {banner && (
+        <div
+          className={`mt-4 flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium ${
+            banner.kind === "ok" ? "bg-[#e7f6ee] text-good" : "bg-[#fdeaec] text-bad"
+          }`}
+        >
+          {banner.kind === "ok" ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+          {banner.text}
+        </div>
+      )}
+
+      {/* Google card */}
+      <section className="card mt-5 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <CalendarCheck className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-ink-900">Google (Gmail + Calendar)</h2>
+              <p className="mt-0.5 max-w-md text-[13px] text-muted">
+                One connection: send brief emails from your Gmail, and sync your Google
+                Calendar so prospect meetings auto-generate briefs.
+              </p>
+            </div>
+          </div>
+          {isLoading ? (
+            <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted" />
+          ) : connected ? (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#e7f6ee] px-2.5 py-1 text-xs font-semibold text-good">
+              <span className="h-1.5 w-1.5 rounded-full bg-good" />
+              Connected
+            </span>
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-xs font-semibold text-muted">
+              Not connected
+            </span>
+          )}
+        </div>
+
+        <div className="mt-5 border-t border-line pt-4">
+          {!configured && !connected && (
+            <p className="rounded-lg bg-amber-50 px-3 py-2 text-[13px] text-amber-700">
+              Google isn't set up on the server yet. Add <code>GOOGLE_CLIENT_ID</code> /
+              <code> GOOGLE_CLIENT_SECRET</code> to <code>backend/.env</code> and restart —
+              see <b>docs/RUNBOOK.md</b> for the ~15-min Google Cloud setup.
+            </p>
+          )}
+
+          {configured && !connected && (
+            <a href={googleLoginUrl()} className="btn-primary inline-flex w-fit">
+              <Mail className="h-4 w-4" />
+              Connect Google
+            </a>
+          )}
+
+          {connected && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-ink-700">
+                <CheckCircle2 className="h-4 w-4 text-good" />
+                Connected as <b className="font-semibold">{status?.email ?? "your Google account"}</b>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => syncMutation.mutate()}
+                  disabled={syncMutation.isPending}
+                >
+                  {syncMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
+                  Sync calendar now
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => disconnectMutation.mutate()}
+                  disabled={disconnectMutation.isPending}
+                >
+                  <Unplug className="h-4 w-4" />
+                  Disconnect
+                </button>
+              </div>
+
+              {sync && (
+                <p className="rounded-lg bg-ink-50 px-3 py-2 text-[13px] text-ink-700">
+                  {sync.message}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}

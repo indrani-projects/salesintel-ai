@@ -21,7 +21,7 @@ const navItems: NavItem[] = [
   { to: "/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/dashboard", label: "Briefs", icon: LayoutGrid },
   { to: "/accounts", label: "Accounts", icon: Building2, disabled: true },
-  { to: "/settings", label: "Settings", icon: Settings, disabled: true },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 function Logo({ compact = false }: { compact?: boolean }) {

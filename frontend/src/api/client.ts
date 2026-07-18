@@ -3,9 +3,11 @@ import type {
   BriefRead,
   ChatMessageRead,
   ChatResponse,
+  CalendarSyncResult,
   CompanyRead,
   EmailPreview,
   EmailSendResult,
+  GoogleStatus,
   HealthResponse,
   MeetingCreate,
   MeetingRead,
@@ -71,6 +73,24 @@ export async function postChat(id: number, question: string): Promise<ChatRespon
 export async function getHealth(): Promise<HealthResponse> {
   const { data } = await api.get<HealthResponse>("/health");
   return data;
+}
+
+// ---- Google integration ----
+/** Full URL to start the OAuth connect flow (navigate the browser here). */
+export const googleLoginUrl = () => `${API_BASE_URL}/auth/google/login`;
+
+export async function getGoogleStatus(): Promise<GoogleStatus> {
+  const { data } = await api.get<GoogleStatus>("/integrations/google/status");
+  return data;
+}
+
+export async function syncGoogleCalendar(): Promise<CalendarSyncResult> {
+  const { data } = await api.post<CalendarSyncResult>("/integrations/google/calendar/sync");
+  return data;
+}
+
+export async function disconnectGoogle(): Promise<void> {
+  await api.delete("/integrations/google/disconnect");
 }
 
 export async function getBriefEmailPreview(

@@ -52,6 +52,18 @@ class Settings(BaseSettings):
     # verification never contacts a real mail server.
     mock_email: bool = False
 
+    # ---- Google (one OAuth: Gmail send + Calendar) ----
+    # Create an OAuth client at console.cloud.google.com (see .env.example /
+    # docs/RUNBOOK). Redirect URI must match the registered one exactly.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
+    # Where the OAuth callback sends the browser back to (the app's Settings page).
+    frontend_url: str = "http://localhost:5173"
+    # When true, google_service returns canned events / no-op send — used by tests
+    # and E2E so verification never contacts Google.
+    mock_google: bool = False
+
     @property
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -73,6 +85,11 @@ class Settings(BaseSettings):
     @property
     def email_from(self) -> str:
         return (self.smtp_from or self.smtp_user).strip()
+
+    @property
+    def google_configured(self) -> bool:
+        """True when an OAuth client is set (so the Connect flow can run)."""
+        return bool(self.google_client_id.strip() and self.google_client_secret.strip())
 
     @property
     def docs_root_path(self) -> Path:

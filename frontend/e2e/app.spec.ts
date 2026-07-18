@@ -77,6 +77,21 @@ test("brief view renders, toggles personas, and Scout answers", async ({ page })
   await page.screenshot({ path: `${SHOTS}/07-scout.png`, fullPage: true });
 });
 
+test("settings shows Google connected and syncs the calendar", async ({ page }) => {
+  // Backend runs with MOCK_GOOGLE=1 → reports connected as mock@calendar.test.
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Settings", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Google \(Gmail \+ Calendar\)/ })).toBeVisible();
+  await expect(page.getByText("Connected", { exact: true })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText(/mock@calendar\.test/)).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/10-settings.png`, fullPage: true });
+
+  // Sync the (mock) calendar → the Sleep Company event imports.
+  await page.getByRole("button", { name: /Sync calendar now/i }).click();
+  await expect(page.getByText(/imported 1 prospect meeting/i)).toBeVisible({ timeout: 20_000 });
+  await page.screenshot({ path: `${SHOTS}/11-settings-synced.png`, fullPage: true });
+});
+
 test("send-as-email composes a persona digest and demo-sends", async ({ page }) => {
   const id = await seedMeeting("ae");
   await page.goto(`/meeting/${id}`);

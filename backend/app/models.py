@@ -25,6 +25,10 @@ class Meeting(SQLModel, table=True):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     brief_status: str = "pending"      # mirrors the PRIMARY persona's brief status
     persona: str = "ae"                # the meeting's primary/selected persona
+    # Google Calendar link (set when imported from / pushed to Google). Used to
+    # dedupe calendar syncs and to deep-link to the event.
+    google_event_id: Optional[str] = Field(default=None, index=True)
+    google_html_link: Optional[str] = None
 
 
 class Brief(SQLModel, table=True):
@@ -47,3 +51,16 @@ class ChatMessage(SQLModel, table=True):
     role: str
     content: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class GoogleToken(SQLModel, table=True):
+    # Single-row store of the connected Google account's OAuth credentials (POC:
+    # one rep). The refresh_token keeps the connection alive across restarts.
+    id: Optional[int] = Field(default=None, primary_key=True)
+    google_email: Optional[str] = None
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_uri: str = "https://oauth2.googleapis.com/token"
+    scopes: str = ""                    # space-separated granted scopes
+    token_expiry: Optional[datetime] = None
+    updated_at: datetime = Field(default_factory=datetime.utcnow)

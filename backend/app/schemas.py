@@ -137,6 +137,8 @@ class MeetingRead(BaseModel):
     created_at: datetime
     brief_status: BriefStatus
     persona: Persona = Persona.ae  # the meeting's primary persona
+    google_event_id: Optional[str] = None   # set when linked to a Google Calendar event
+    google_html_link: Optional[str] = None   # deep-link to the event on Google
 
 
 # --------------------------------------------------------------------------- #
@@ -231,6 +233,24 @@ class EmailSendResult(BaseModel):
     recipient: str
     subject: str
     message: str                     # human-readable status for the UI
+
+
+# --------------------------------------------------------------------------- #
+# Google integration (one OAuth: Gmail send + Calendar)
+# --------------------------------------------------------------------------- #
+class GoogleStatus(BaseModel):
+    configured: bool = False          # OAuth client set in .env (Connect is possible)
+    connected: bool = False           # a Google account is linked (token stored)
+    email: Optional[str] = None       # the connected Google account
+    scopes: List[str] = Field(default_factory=list)
+
+
+class CalendarSyncResult(BaseModel):
+    imported: int = 0                 # new meetings created from Google events
+    briefed: int = 0                  # of those, matched a prospect → brief queued
+    skipped_existing: int = 0         # events already imported (deduped)
+    scanned: int = 0                  # total Google events looked at
+    message: str = ""
 
 
 # --------------------------------------------------------------------------- #

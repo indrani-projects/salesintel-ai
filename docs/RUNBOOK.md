@@ -143,6 +143,46 @@ backend an SMTP account. Easiest is Gmail:
 
 ---
 
+## 2c. Optional — Google (Gmail send + Calendar), one OAuth
+
+Connect your Google account once to (a) send brief emails **from your Gmail** and
+(b) **two-way sync Google Calendar** — prospect meetings on your calendar import and
+auto-generate briefs; meetings you add in the app push out as Google events. All
+optional: leave it unset and email falls back to SMTP/demo and the calendar stays
+local. `MOCK_GOOGLE=1` (tests/E2E) never touches Google.
+
+**One-time Google Cloud setup (~15 min), at https://console.cloud.google.com:**
+1. Sign in with the Gmail to use; **create a project** (e.g. `SalesIntel`).
+2. **APIs & Services → Library →** enable **Gmail API** and **Google Calendar API**.
+3. **OAuth consent screen:** User type **External**; app name + your email; **add
+   scopes** `gmail.send`, `calendar.events`, `openid`, `userinfo.email`; **add your
+   Gmail as a Test user**; keep publishing status **Testing** (no Google review for
+   your own account).
+4. **Credentials → Create Credentials → OAuth client ID → Web application →**
+   Authorized redirect URI **exactly** `http://localhost:8000/auth/google/callback`
+   (also add `https://<your-ngrok-domain>/api/auth/google/callback` if you'll
+   connect while running `stack.ps1 share`).
+5. **Copy the Client ID + Client Secret** into `backend/.env`:
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   FRONTEND_URL=http://localhost:5173
+   ```
+6. Restart the backend (`.\stack.ps1 restart`).
+
+**Connect:** in the app go to **Settings → Connect Google** → consent popup. Testing
+mode shows a *"Google hasn't verified this app"* notice → **Advanced → Go to
+SalesIntel (unsafe)** (safe: it's your own test app) → grant Gmail + Calendar. You'll
+land back on Settings showing **Connected**. Then **Sync calendar now** imports
+prospect meetings, and **Send as email** now sends from your Gmail.
+
+> Only events matching a known prospect (a folder in `docs/`, e.g. *The Sleep
+> Company*) are imported; other calendar events are ignored. Re-syncing is
+> idempotent (deduped by the Google event id). One connected account (POC).
+
+---
+
 ## 3. Start the app
 
 **One command (recommended)** — from the repo root:

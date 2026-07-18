@@ -81,6 +81,70 @@ def generate_one_task(meeting_id: int, persona: str) -> None:
     _run_generation(meeting_id, persona)
 
 
+def build_meeting_with_briefs(
+    session: Session,
+    *,
+    subject: str,
+    prospect_company: str,
+    start_time: datetime,
+    why: str = "",
+    agenda: str = "",
+    persona: str = "ae",
+    google_event_id: Optional[str] = None,
+    google_html_link: Optional[str] = None,
+) -> models.Meeting:
+    """Create a Meeting and seed its three persona Brief rows. Does NOT schedule
+    generation — the caller decides (BackgroundTasks for the API request, or a
+    direct generate_one_task() call for the Google-sync background path). Reused by
+    both create_meeting and the calendar importer so they stay in lockstep."""
+    meeting = models.Meeting(
+        subject=subject,
+        prospect_company=prospect_company,
+        company_slug=sources.resolve_company_slug(prospect_company),
+        why=why,
+        agenda=agenda,
+        start_time=start_time,
+        brief_status="generating",
+        persona=persona,
+        google_event_id=google_event_id,
+        google_html_link=google_html_link,
+    )
+    session.add(meeting)
+    session.commit()
+    session.refresh(meeting)
+    # Primary persona generates first; the other two are lazy (on first view).
+    for p in ALL_PERSONAS:
+        st = "generating" if p == persona else "pending"
+        session.add(models.Brief(meeting_id=meeting.id, persona=p, status=st))
+    meeting.brief_status = "generating"
+    session.add(meeting)
+    session.commit()
+    session.refresh(meeting)
+    return meeting
+
+
+def _maybe_push_to_google(session: Session, meeting: models.Meeting) -> None:
+    """If Google is connected, mirror the meeting to the user's calendar. Best-effort
+    — never let a Google failure break meeting creation."""
+    from app.services import google_service
+
+    if meeting.google_event_id or not google_service.is_connected():
+        return
+    try:
+        ev = google_service.insert_event(
+            summary=meeting.subject,
+            start=meeting.start_time,
+            description=(meeting.why or ""),
+        )
+        meeting.google_event_id = ev.get("id")
+        meeting.google_html_link = ev.get("html_link")
+        session.add(meeting)
+        session.commit()
+        session.refresh(meeting)
+    except Exception:  # noqa: BLE001 — creation must succeed regardless
+        pass
+
+
 # --------------------------------------------------------------------------- #
 # Routes
 # --------------------------------------------------------------------------- #
@@ -91,30 +155,16 @@ def create_meeting(
     session: Session = Depends(get_session),
 ) -> models.Meeting:
     persona = body.persona.value if isinstance(body.persona, Persona) else str(body.persona)
-    meeting = models.Meeting(
+    meeting = build_meeting_with_briefs(
+        session,
         subject=body.subject,
         prospect_company=body.prospect_company,
-        company_slug=sources.resolve_company_slug(body.prospect_company),
+        start_time=body.start_time,
         why=body.why,
         agenda=body.agenda,
-        start_time=body.start_time,
-        brief_status="pending",
         persona=persona,
     )
-    session.add(meeting)
-    session.commit()
-    session.refresh(meeting)
-
-    # Primary persona generates now; other personas are generated LAZILY on first
-    # view (via GET brief?persona=). Keeps free-tier request usage to 1/meeting
-    # unless the rep actually toggles.
-    for p in ALL_PERSONAS:
-        st = "generating" if p == persona else "pending"
-        session.add(models.Brief(meeting_id=meeting.id, persona=p, status=st))
-    meeting.brief_status = "generating"
-    session.add(meeting)
-    session.commit()
-
+    _maybe_push_to_google(session, meeting)
     background_tasks.add_task(generate_one_task, meeting.id, persona)
     return meeting
 

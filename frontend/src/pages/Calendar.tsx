@@ -1,19 +1,20 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import type { DateSelectArg, EventClickArg } from "@fullcalendar/core";
-import { Plus } from "lucide-react";
-import { listMeetings } from "../api/client";
+import { Loader2, Plus, RefreshCw } from "lucide-react";
+import { getGoogleStatus, listMeetings, syncGoogleCalendar } from "../api/client";
 import type { MeetingRead } from "../api/types";
 import { STATUS_META, isActiveStatus } from "../lib/format";
 import { MeetingDialog } from "../components/MeetingDialog";
 
 export function CalendarPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [initialStart, setInitialStart] = useState<string | undefined>();
 
@@ -24,6 +25,13 @@ export function CalendarPage() {
       const list = (query.state.data as MeetingRead[] | undefined) ?? [];
       return list.some((m) => isActiveStatus(m.brief_status)) ? 4000 : false;
     },
+  });
+
+  const { data: google } = useQuery({ queryKey: ["google-status"], queryFn: getGoogleStatus });
+
+  const syncMutation = useMutation({
+    mutationFn: syncGoogleCalendar,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["meetings"] }),
   });
 
   const events = useMemo(
@@ -63,10 +71,27 @@ export function CalendarPage() {
             Click any day or time slot to schedule a meeting and auto-generate a brief.
           </p>
         </div>
-        <button className="btn-primary" onClick={() => openNew()}>
-          <Plus className="h-4 w-4" />
-          New meeting
-        </button>
+        <div className="flex items-center gap-2.5">
+          {google?.connected && (
+            <button
+              className="btn-secondary"
+              onClick={() => syncMutation.mutate()}
+              disabled={syncMutation.isPending}
+              title="Import prospect meetings from your Google Calendar"
+            >
+              {syncMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Sync Google
+            </button>
+          )}
+          <button className="btn-primary" onClick={() => openNew()}>
+            <Plus className="h-4 w-4" />
+            New meeting
+          </button>
+        </div>
       </div>
 
       <div className="card p-4 sm:p-5">
