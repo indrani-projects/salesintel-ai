@@ -33,8 +33,10 @@ test("create a meeting via the dialog lands on the dashboard", async ({ page }) 
   await page.getByRole("button", { name: /new meeting/i }).first().click();
 
   await expect(page.getByRole("dialog")).toBeVisible();
-  await page.fill("#m-subject", "Discovery call with The Sleep Company");
-  await page.selectOption("#m-company", "The Sleep Company");
+  // Company is now free-text — use an unknown, web-only company (no docs folder)
+  // to prove web-first intel drives the brief.
+  await page.fill("#m-subject", "Discovery call with Freshworks");
+  await page.fill("#m-company", "Freshworks");
   await page.fill("#m-why", "Scale retail + B2B");
   await page.fill("#m-agenda", "Omnichannel data + support");
   await page.screenshot({ path: `${SHOTS}/02-dialog.png` });
@@ -42,7 +44,7 @@ test("create a meeting via the dialog lands on the dashboard", async ({ page }) 
 
   await expect(page.getByRole("dialog")).toBeHidden();
   await page.goto("/dashboard");
-  await expect(page.getByText("The Sleep Company").first()).toBeVisible();
+  await expect(page.getByText("Freshworks").first()).toBeVisible();
   await expect(page.getByText("Account Executive").first()).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/03-dashboard.png`, fullPage: true });
 });

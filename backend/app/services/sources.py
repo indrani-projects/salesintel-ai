@@ -168,3 +168,38 @@ def load_company_sources(slug: str) -> List[SourceDoc]:
     sources.extend(zoho_docs)
 
     return sources
+
+
+def load_company_intel(company_name: str, slug: Optional[str] = None) -> List[SourceDoc]:
+    """Web-first prospect intel for `company_name` (cached web sources), falling back
+    to docs/<slug>/ only when the web returns nothing. Shared Zoho docs are always
+    appended. Both the brief engine and Scout use this so they share one prepared
+    intel set. Web sources are tagged ["web", …] so provenance shows in citations.
+    """
+    from app.services import web_sources  # local import keeps module load order simple
+
+    root = settings.docs_root_path
+    sources: list[SourceDoc] = []
+    idx = 1
+
+    web_docs = web_sources.fetch_intel(company_name) if settings.web_intel_enabled else []
+    if web_docs:
+        for wd in web_docs:
+            sources.append(
+                SourceDoc(
+                    marker=f"S{idx}",
+                    title=f"{wd.source} — {company_name}",
+                    filename=None,
+                    url=(wd.url or None),
+                    text=wd.text,
+                    tags=["web", "prospect"],
+                )
+            )
+            idx += 1
+    elif slug:  # no web intel — fall back to local prospect docs
+        prospect_docs, idx = _load_folder_docs(root / slug, "prospect", idx)
+        sources.extend(prospect_docs)
+
+    zoho_docs, idx = _load_folder_docs(root / _ZOHO_SLUG, "zoho", idx)
+    sources.extend(zoho_docs)
+    return sources

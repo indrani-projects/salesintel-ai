@@ -64,6 +64,16 @@ class Settings(BaseSettings):
     # and E2E so verification never contacts Google.
     mock_google: bool = False
 
+    # ---- Web prospect intel (fetch news / SEC filings / social by company name) ----
+    # On meeting creation the brief pulls live web intel for the prospect, keyword-
+    # filters it (no LLM), caches the filtered text, and feeds it to the brief + Scout.
+    # Falls back to docs/<company>/ when the web returns nothing.
+    web_intel_enabled: bool = True
+    web_ttl_hours: int = 24          # cached filtered-intel freshness
+    web_max_chars: int = 6000        # cap on cached text per source
+    # When true, web_sources returns deterministic canned intel — tests/E2E, no network.
+    mock_web: bool = False
+
     @property
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

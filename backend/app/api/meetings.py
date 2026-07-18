@@ -58,6 +58,7 @@ def _run_generation(meeting_id: int, persona: str) -> None:
                 meeting.why,
                 meeting.agenda,
                 persona,
+                company_name=meeting.prospect_company,
             )
             brief.content_json = content.model_dump_json()
             brief.html = brief_render.render_html(content)

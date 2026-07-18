@@ -28,6 +28,7 @@ export default defineConfig({
         MOCK_LLM: "1",
         MOCK_EMAIL: "1",
         MOCK_GOOGLE: "1",
+        MOCK_WEB: "1",
         DATABASE_URL: "sqlite:///./e2e_salesintel.db",
         LLM_API_KEY: "test-key",
       },

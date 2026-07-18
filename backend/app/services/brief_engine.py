@@ -26,7 +26,7 @@ from app.services.llm_client import get_client, get_model
 from app.services.sources import (
     COMPANY_NAMES,
     _display_name,
-    load_company_sources,
+    load_company_intel,
     resolve_company_slug,
 )
 
@@ -402,19 +402,33 @@ def _mock_brief(company, company_slug, persona, persona_sections, sources) -> Br
     )
 
 
+def _slugify(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (name or "").lower()).strip("_") or "prospect"
+
+
 def generate_brief(
-    company_slug: str,
+    company_slug: Optional[str],
     subject: str,
     why: str,
     agenda: str,
     persona: str = "ae",
+    company_name: Optional[str] = None,
 ) -> BriefContent:
     persona = persona if persona in PERSONA_LABELS else "ae"
-    slug = resolve_company_slug(company_slug) or company_slug
-    company = COMPANY_NAMES.get(slug) or _display_name(slug)
+    slug = resolve_company_slug(company_slug) if company_slug else None
+    # Display name: prefer the meeting's free-text company (handles unknown companies
+    # with no docs folder), else the slug-derived name.
+    if company_name:
+        company = company_name
+    elif slug:
+        company = COMPANY_NAMES.get(slug) or _display_name(slug)
+    else:
+        company = _display_name(company_slug) if company_slug else "Prospect"
+    slug = slug or _slugify(company)
     persona_sections = sections_for(persona)
 
-    sources = load_company_sources(slug)
+    # Web-first intel by company NAME (cached), falling back to docs/<slug>/.
+    sources = load_company_intel(company, slug)
 
     if settings.mock_llm:
         return _mock_brief(company, slug, persona, persona_sections, sources)

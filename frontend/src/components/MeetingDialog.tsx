@@ -5,6 +5,10 @@ import { createMeeting, listCompanies } from "../api/client";
 import type { CompanyRead, MeetingCreate, Persona } from "../api/types";
 import { PERSONAS, PERSONA_ACCENTS, PERSONA_LABELS, PERSONA_TAGLINES } from "../lib/persona";
 
+// Any company works (we pull live web intel by name); these are the research
+// guide's 5 targets, offered as autocomplete suggestions.
+const WEB_SUGGESTIONS = ["Freshworks", "Braze", "Sprout Social", "Amplitude", "Zuora"];
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -125,21 +129,23 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
               <label className="label" htmlFor="m-company">
                 Prospect company
               </label>
-              <select
+              <input
                 id="m-company"
                 className="input"
+                list="m-company-suggestions"
+                placeholder="Type any company (e.g. Freshworks)"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select a company…
-                </option>
+                autoComplete="off"
+              />
+              <datalist id="m-company-suggestions">
                 {companies.map((c: CompanyRead) => (
-                  <option key={c.slug} value={c.name}>
-                    {c.name} ({c.doc_count} docs)
-                  </option>
+                  <option key={c.slug} value={c.name} />
                 ))}
-              </select>
+                {WEB_SUGGESTIONS.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="label" htmlFor="m-start">
