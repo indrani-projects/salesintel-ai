@@ -39,6 +39,9 @@ share.config
 # stack.ps1 background logs + pid files
 .logs/
 
+# Google OAuth client-secret JSON (the "Download JSON" from Google Cloud) — NEVER commit
+client_secret_*.json
+
 # OS / editor
 .DS_Store
 Thumbs.db

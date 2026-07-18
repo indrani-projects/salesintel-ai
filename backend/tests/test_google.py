@@ -64,3 +64,16 @@ def test_disconnect_is_204(client):
     # mock mode has no stored token, but the endpoint should still succeed
     r = client.delete("/integrations/google/disconnect")
     assert r.status_code == 204
+
+
+def test_prospect_matching_is_lenient_on_the_prefix():
+    # Real Google titles often drop the leading "The" — must still resolve.
+    from app.api.google import _match_prospect
+
+    slug, name = _match_prospect({"summary": "Discovery call with Sleep Company"})
+    assert slug == "sleep_company"
+    assert name == "The Sleep Company"
+
+    # A non-prospect event resolves to nothing.
+    none_slug, _ = _match_prospect({"summary": "Team standup", "attendees": []})
+    assert none_slug is None

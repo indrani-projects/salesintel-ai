@@ -114,12 +114,18 @@ def _client_config() -> dict:
 def _build_flow(state: Optional[str] = None):
     from google_auth_oauthlib.flow import Flow
 
-    return Flow.from_client_config(
+    flow = Flow.from_client_config(
         _client_config(),
         scopes=GOOGLE_SCOPES,
         redirect_uri=settings.google_redirect_uri,
         state=state,
     )
+    # Disable PKCE: the login and callback are separate stateless requests, so the
+    # auto-generated code_verifier can't survive between them ("Missing code
+    # verifier" at token exchange). A confidential web client authenticates the
+    # exchange with its client_secret, so PKCE isn't required.
+    flow.autogenerate_code_verifier = False
+    return flow
 
 
 def authorization_url() -> str:

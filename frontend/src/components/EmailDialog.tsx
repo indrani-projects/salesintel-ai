@@ -94,11 +94,11 @@ export function EmailDialog({ open, onClose, meetingId, persona }: Props) {
             </div>
             <div>
               <h3 className="text-base font-semibold text-ink-900">
-                {result.mode === "sent"
-                  ? "Email sent"
+                {result.mode === "error"
+                  ? "Could not send"
                   : result.mode === "demo"
                     ? "Demo send complete"
-                    : "Could not send"}
+                    : "Email sent"}
               </h3>
               <p className="mt-1 max-w-sm text-sm text-muted">{result.message}</p>
             </div>

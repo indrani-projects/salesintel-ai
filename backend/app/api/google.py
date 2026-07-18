@@ -41,10 +41,14 @@ def google_login():
 def google_callback(code: Optional[str] = Query(None), error: Optional[str] = Query(None)):
     dest = settings.frontend_url.rstrip("/") + "/settings"
     if error or not code:
+        print(f"[google] callback returned error param: {error!r}", flush=True)
         return RedirectResponse(f"{dest}?google=error")
     try:
         google_service.exchange_code(code)
-    except Exception:
+    except Exception as exc:  # noqa: BLE001
+        import traceback
+        traceback.print_exc()
+        print(f"[google] exchange_code failed: {type(exc).__name__}: {exc}", flush=True)
         return RedirectResponse(f"{dest}?google=error")
     return RedirectResponse(f"{dest}?google=connected")
 
@@ -61,13 +65,20 @@ def google_disconnect() -> Response:
 
 
 def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
-    """Return (slug, display_name) if a known prospect appears in the event."""
-    hay = " ".join(
-        [event.get("summary", ""), event.get("description", "")]
-        + list(event.get("attendees", []))
-    ).lower()
+    """Return (slug, display_name) if a known prospect appears in the event.
+
+    Matches on the *normalized* company name (lowercased, leading "the" dropped,
+    non-alphanumerics -> underscores) so titles like "Discovery call with Sleep
+    Company" still resolve to "The Sleep Company" (slug sleep_company)."""
+    hay = sources._normalize(
+        " ".join(
+            [event.get("summary", ""), event.get("description", "")]
+            + list(event.get("attendees", []))
+        )
+    )
     for c in sources.list_companies():
-        if c.name.lower() in hay:
+        key = sources._normalize(c.name)  # "The Sleep Company" -> "sleep_company"
+        if key and key in hay:
             return c.slug, c.name
     return None, None
 
