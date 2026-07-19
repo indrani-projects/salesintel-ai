@@ -235,6 +235,14 @@ class EmailSendResult(BaseModel):
     message: str                     # human-readable status for the UI
 
 
+class EmailAutomationStatus(BaseModel):
+    """Read-only view of the auto-email settings, for the Settings page."""
+    enabled: bool = False            # AUTO_EMAIL_ENABLED — sends on-ready + reminder
+    lead_minutes: int = 60           # reminder fires this long before start_time
+    recipient: str = ""              # default_recipient (blank ⇒ auto-send skipped)
+    transport: str = "demo"          # "gmail" | "smtp" | "demo" — how a send delivers
+
+
 # --------------------------------------------------------------------------- #
 # Google integration (one OAuth: Gmail send + Calendar)
 # --------------------------------------------------------------------------- #

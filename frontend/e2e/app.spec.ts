@@ -95,6 +95,16 @@ test("settings shows Google connected and syncs the calendar", async ({ page }) 
   await page.screenshot({ path: `${SHOTS}/11-settings-synced.png`, fullPage: true });
 });
 
+test("settings shows the automated-emails card", async ({ page }) => {
+  // Backend runs with AUTO_EMAIL_ENABLED=0 → card renders "Off" with the config.
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Automated emails" })).toBeVisible();
+  await expect(page.getByText(/Reminder:/)).toBeVisible();
+  await expect(page.getByText(/60 min/)).toBeVisible();
+  await expect(page.getByText(/rep@salesintel\.test/)).toBeVisible();
+  await page.screenshot({ path: `${SHOTS}/12-settings-automation.png`, fullPage: true });
+});
+
 test("send-as-email composes a persona digest and demo-sends", async ({ page }) => {
   const id = await seedMeeting("ae");
   await page.goto(`/meeting/${id}`);

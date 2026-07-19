@@ -21,6 +21,11 @@ os.environ["MOCK_WEB"] = "1"
 # Tests drive calendar sync explicitly; keep the boot-time auto-sync off so its
 # background pass can't race the "clean first sync" assertions.
 os.environ["SYNC_ON_STARTUP"] = "0"
+# Auto-email: keep the master switch OFF so the on-ready hook and the reminder
+# daemon never fire during unrelated tests; test_notifier.py calls the notifier
+# functions directly. A recipient is set so those direct calls have a target.
+os.environ["AUTO_EMAIL_ENABLED"] = "0"
+os.environ["DEFAULT_RECIPIENT"] = "rep@salesintel.test"
 os.environ["DATABASE_URL"] = f"sqlite:///{_DB_FILE.as_posix()}"
 os.environ.setdefault("LLM_API_KEY", "test-key")
 

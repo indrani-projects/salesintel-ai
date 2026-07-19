@@ -5,13 +5,16 @@ import {
   AlertTriangle,
   CalendarCheck,
   CheckCircle2,
+  Clock,
   Loader2,
   Mail,
   RefreshCw,
+  Send,
   Unplug,
 } from "lucide-react";
 import {
   disconnectGoogle,
+  getEmailAutomation,
   getGoogleStatus,
   googleLoginUrl,
   syncGoogleCalendar,
@@ -28,6 +31,11 @@ export function SettingsPage() {
     queryKey: ["google-status"],
     queryFn: getGoogleStatus,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: automation } = useQuery({
+    queryKey: ["email-automation"],
+    queryFn: getEmailAutomation,
   });
 
   // React to the OAuth callback redirect (?google=connected|error).
@@ -163,6 +171,64 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+      </section>
+
+      {/* Automated emails card (read-only) */}
+      <section className="card mt-5 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <Send className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-base font-semibold text-ink-900">Automated emails</h2>
+              <p className="mt-0.5 max-w-md text-[13px] text-muted">
+                Each brief is emailed to you automatically when it's ready, and again
+                shortly before the meeting.
+              </p>
+            </div>
+          </div>
+          {automation ? (
+            automation.enabled ? (
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-[#e7f6ee] px-2.5 py-1 text-xs font-semibold text-good">
+                <span className="h-1.5 w-1.5 rounded-full bg-good" />
+                On
+              </span>
+            ) : (
+              <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-ink-100 px-2.5 py-1 text-xs font-semibold text-muted">
+                Off
+              </span>
+            )
+          ) : (
+            <Loader2 className="mt-1 h-5 w-5 animate-spin text-muted" />
+          )}
+        </div>
+
+        {automation && (
+          <div className="mt-5 space-y-2.5 border-t border-line pt-4 text-sm text-ink-700">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-good" />
+              On ready: the brief is sent as soon as it's generated.
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-4 w-4 text-brand-700" />
+              Reminder: <b className="font-semibold">{automation.lead_minutes} min</b> before
+              the meeting start time.
+            </div>
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-muted" />
+              Sent to <b className="font-semibold">{automation.recipient || "— (set DEFAULT_RECIPIENT)"}</b>
+              <span className="text-muted">
+                ·{" "}
+                {automation.transport === "gmail"
+                  ? "via your Gmail"
+                  : automation.transport === "smtp"
+                    ? "via SMTP"
+                    : "demo (not delivered)"}
+              </span>
+            </div>
+          </div>
+        )}
       </section>
     </div>
   );

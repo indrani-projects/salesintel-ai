@@ -169,3 +169,10 @@ export interface CalendarSyncResult {
   scanned: number;
   message: string;
 }
+
+export interface EmailAutomationStatus {
+  enabled: boolean;
+  lead_minutes: number;
+  recipient: string;
+  transport: "gmail" | "smtp" | "demo";
+}

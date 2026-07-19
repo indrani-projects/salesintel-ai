@@ -5,6 +5,7 @@ import type {
   ChatResponse,
   CalendarSyncResult,
   CompanyRead,
+  EmailAutomationStatus,
   EmailPreview,
   EmailSendResult,
   GoogleStatus,
@@ -91,6 +92,13 @@ export async function syncGoogleCalendar(): Promise<CalendarSyncResult> {
 
 export async function disconnectGoogle(): Promise<void> {
   await api.delete("/integrations/google/disconnect");
+}
+
+export async function getEmailAutomation(): Promise<EmailAutomationStatus> {
+  const { data } = await api.get<EmailAutomationStatus>(
+    "/integrations/email/automation",
+  );
+  return data;
 }
 
 export async function getBriefEmailPreview(

@@ -15,12 +15,13 @@ from app.db import get_session
 from app.schemas import (
     BriefContent,
     BriefRead,
+    EmailAutomationStatus,
     EmailPreview,
     EmailSendRequest,
     EmailSendResult,
     Persona,
 )
-from app.services import email_service
+from app.services import email_service, notifier
 
 router = APIRouter(tags=["briefs"])
 
@@ -113,3 +114,9 @@ def send_brief_email(
     content = _ready_brief_content(session, meeting_id, persona)
     composed = email_service.compose_brief_email(content)
     return email_service.send_brief_email(composed, payload.recipient)
+
+
+@router.get("/integrations/email/automation", response_model=EmailAutomationStatus)
+def email_automation_status() -> EmailAutomationStatus:
+    """Read-only view of the auto-email settings (on-ready + reminder) for Settings."""
+    return EmailAutomationStatus(**notifier.automation_status())

@@ -65,6 +65,11 @@ def on_startup() -> None:
         # Sync + generation run in a daemon thread so uvicorn finishes binding the
         # port immediately; briefs fill in afterwards (status is polled by the UI).
         threading.Thread(target=_startup_sync_and_generate, daemon=True).start()
+    if settings.auto_email_enabled:
+        # Long-lived reminder scheduler: emails each brief ~1h before its meeting.
+        from app.services import notifier
+
+        threading.Thread(target=notifier.reminder_loop, daemon=True).start()
 
 
 @app.get("/health", response_model=HealthResponse)

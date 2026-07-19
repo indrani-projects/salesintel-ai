@@ -68,6 +68,16 @@ class Settings(BaseSettings):
     # the explicit-sync assertions run against a clean, un-raced DB.
     sync_on_startup: bool = True
 
+    # ---- Automated brief emails ----
+    # When on, a meeting's brief is emailed automatically as soon as it's ready, and
+    # again `reminder_lead_minutes` before the meeting start_time. Recipient is
+    # `default_recipient`; delivery uses the same Gmail/SMTP/demo path as manual send.
+    # Master switch — off in tests/E2E so the on-ready hook and the reminder daemon
+    # can't interfere with deterministic assertions.
+    auto_email_enabled: bool = True
+    reminder_lead_minutes: int = 60   # send the reminder this long before start_time
+    reminder_poll_seconds: int = 60   # how often the reminder scheduler wakes up
+
     # ---- Web prospect intel (fetch news / SEC filings / social by company name) ----
     # On meeting creation the brief pulls live web intel for the prospect, keyword-
     # filters it (no LLM), caches the filtered text, and feeds it to the brief + Scout.

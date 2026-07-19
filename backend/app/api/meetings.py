@@ -15,6 +15,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Response
 from sqlmodel import Session, select
 
 from app import models
+from app.config import settings
 from app.db import engine, get_session
 from app.schemas import CompanyRead, MeetingCreate, MeetingRead, Persona
 from app.services import brief_engine, brief_render, sources
@@ -77,6 +78,14 @@ def _run_generation(meeting_id: int, persona: str) -> None:
         session.add(brief)
         session.add(meeting)
         session.commit()
+        became_ready = is_primary and brief.status == "ready"
+
+    # Auto-email the brief the moment the PRIMARY persona is ready (outside the
+    # session, so the row is durable). Gated by the master switch; fail-soft inside.
+    if became_ready and settings.auto_email_enabled:
+        from app.services import notifier
+
+        notifier.send_ready_email(meeting_id)
 
 
 def generate_one_task(meeting_id: int, persona: str) -> None:

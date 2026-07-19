@@ -20,6 +20,8 @@ _ADDED_COLUMNS = {
     "meeting": {
         "google_event_id": "VARCHAR",
         "google_html_link": "VARCHAR",
+        "ready_email_sent_at": "DATETIME",
+        "reminder_sent_at": "DATETIME",
     },
 }
 

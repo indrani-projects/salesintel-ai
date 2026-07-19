@@ -29,6 +29,10 @@ class Meeting(SQLModel, table=True):
     # dedupe calendar syncs and to deep-link to the event.
     google_event_id: Optional[str] = Field(default=None, index=True)
     google_html_link: Optional[str] = None
+    # Automated-email guards: when set, that email has already gone out for this
+    # meeting (idempotency for the on-ready send and the 1-hour reminder).
+    ready_email_sent_at: Optional[datetime] = None
+    reminder_sent_at: Optional[datetime] = None
 
 
 class Brief(SQLModel, table=True):
