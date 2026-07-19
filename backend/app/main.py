@@ -3,6 +3,8 @@ SalesIntel AI — FastAPI application entrypoint.
 """
 from __future__ import annotations
 
+import threading
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -27,9 +29,42 @@ app.include_router(chat.router)
 app.include_router(google.router)
 
 
+def _startup_sync_and_generate() -> None:
+    """Runs once at boot, off the request path (its own thread) so it never delays
+    server start: (1) requeue any brief a prior process left mid-'generating',
+    (2) sync Google Calendar (import only) if connected, (3) generate all queued
+    briefs in the background, earliest meeting first. Fully fail-soft."""
+    try:
+        requeued = meetings.reset_stale_generating()
+        if requeued:
+            print(f"[startup] requeued {requeued} stale brief(s)", flush=True)
+    except Exception as exc:  # noqa: BLE001 — never block startup
+        print(f"[startup] reset_stale_generating failed: {exc}", flush=True)
+
+    try:
+        if google.google_service.is_connected():
+            scanned, imported, updated, skipped = google.import_calendar_events()
+            print(
+                f"[startup] calendar sync: scanned {scanned}, imported {imported}, "
+                f"updated {updated}, skipped {skipped}",
+                flush=True,
+            )
+    except Exception as exc:  # noqa: BLE001 — never block startup
+        print(f"[startup] calendar sync failed: {exc}", flush=True)
+
+    try:
+        meetings.generate_pending_briefs()
+    except Exception as exc:  # noqa: BLE001
+        print(f"[startup] brief generation failed: {exc}", flush=True)
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     init_db()
+    if settings.sync_on_startup:
+        # Sync + generation run in a daemon thread so uvicorn finishes binding the
+        # port immediately; briefs fill in afterwards (status is polled by the UI).
+        threading.Thread(target=_startup_sync_and_generate, daemon=True).start()
 
 
 @app.get("/health", response_model=HealthResponse)

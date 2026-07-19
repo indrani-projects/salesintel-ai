@@ -18,6 +18,9 @@ os.environ["MOCK_LLM"] = "1"
 os.environ["MOCK_EMAIL"] = "1"
 os.environ["MOCK_GOOGLE"] = "1"
 os.environ["MOCK_WEB"] = "1"
+# Tests drive calendar sync explicitly; keep the boot-time auto-sync off so its
+# background pass can't race the "clean first sync" assertions.
+os.environ["SYNC_ON_STARTUP"] = "0"
 os.environ["DATABASE_URL"] = f"sqlite:///{_DB_FILE.as_posix()}"
 os.environ.setdefault("LLM_API_KEY", "test-key")
 

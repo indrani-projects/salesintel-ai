@@ -77,3 +77,74 @@ def test_prospect_matching_is_lenient_on_the_prefix():
     # A non-prospect event resolves to nothing.
     none_slug, _ = _match_prospect({"summary": "Team standup", "attendees": []})
     assert none_slug is None
+
+
+def test_web_only_enrichment_company_imports_without_docs_folder():
+    # Freshworks has no docs/ folder — it is a web-first (enrichment) company.
+    # Its calendar event must still be recognized as a prospect, regardless of
+    # the title phrasing, with slug=None so the web-first intel path builds it.
+    from app.api.google import _match_prospect
+
+    for summary in (
+        "Freshworks",
+        "Discovery call with Freshworks",
+        "Meeting with Freshworks team",
+        "Braze QBR",
+    ):
+        slug, name = _match_prospect({"summary": summary})
+        assert slug is None, summary
+        assert name in ("Freshworks", "Braze"), summary
+
+
+def test_generic_unknown_company_imports_from_meeting_title():
+    # A company with neither a docs folder nor an enrichment hint still imports
+    # when the title reads like a sales meeting.
+    from app.api.google import _match_prospect
+
+    slug, name = _match_prospect({"summary": "Sales sync with Acme Robotics"})
+    assert slug is None
+    assert name == "Acme Robotics"
+
+
+def test_editing_an_event_in_google_updates_the_meeting_on_resync(client, monkeypatch):
+    # First sync imports the canned Sleep Company event.
+    _sync(client)
+    meetings = client.get("/meetings").json()
+    m = next(x for x in meetings if x.get("google_event_id") == "mock-evt-sleep")
+    assert m["prospect_company"] == "The Sleep Company"
+
+    # The rep edits that same event in Google — different company (Braze), new time.
+    from app.services import google_service
+
+    edited = [
+        {
+            "id": "mock-evt-sleep",
+            "summary": "Discovery call with Braze",
+            "start": "2026-08-05T09:00:00+00:00",
+            "html_link": "https://calendar.google.com/mock/braze",
+            "description": "Rescheduled",
+            "attendees": [],
+        }
+    ]
+    monkeypatch.setattr(google_service, "list_events", lambda *a, **k: edited)
+
+    res = _sync(client)
+    assert res["imported"] == 0        # not a new event
+    assert "updated 1" in res["message"]
+
+    # The meeting reflects the edit and its brief was rebuilt for the new company.
+    updated = client.get(f"/meetings/{m['id']}").json()
+    assert updated["prospect_company"] == "Braze"
+    assert updated["company_slug"] is None          # Braze is web-first (no docs folder)
+    assert "Braze" in updated["subject"]
+    brief = client.get(f"/meetings/{m['id']}/brief").json()
+    assert brief["status"] == "ready"
+
+
+def test_personal_events_are_not_imported():
+    # The generic path must not import personal calendar events.
+    from app.api.google import _match_prospect
+
+    for summary in ("Lunch with Mom", "Dentist", "Gym", "Pick up kids"):
+        slug, name = _match_prospect({"summary": summary})
+        assert (slug, name) == (None, None), summary

@@ -7,6 +7,7 @@ create, the primary persona is generated first, then the other two.
 """
 from __future__ import annotations
 
+import threading
 from datetime import datetime
 from typing import List, Optional
 
@@ -82,6 +83,97 @@ def generate_one_task(meeting_id: int, persona: str) -> None:
     _run_generation(meeting_id, persona)
 
 
+# --------------------------------------------------------------------------- #
+# Background brief-generation worker (date-ordered queue)
+# --------------------------------------------------------------------------- #
+# Calendar sync and startup only *import* meetings (primary brief left "pending").
+# This worker drains that queue in start_time-ascending order, one meeting at a
+# time. It is serialized by a lock so overlapping triggers (a sync click while the
+# startup pass is running) never double-generate; a rerun flag makes a trigger that
+# arrives mid-pass get honored instead of dropped.
+_gen_lock = threading.Lock()
+_gen_rerun = threading.Event()
+
+
+def _next_pending_meeting() -> Optional[tuple[int, str]]:
+    """The earliest meeting whose primary brief is still queued, as (id, persona)."""
+    with Session(engine) as session:
+        meeting = session.exec(
+            select(models.Meeting)
+            .where(models.Meeting.brief_status == "pending")
+            .order_by(models.Meeting.start_time)
+        ).first()
+        if meeting is None:
+            return None
+        return meeting.id, meeting.persona
+
+
+def generate_pending_briefs() -> None:
+    """Generate the primary brief for every meeting queued as 'pending', earliest
+    meeting first. Safe to call from anywhere (BackgroundTasks, a startup thread);
+    only one pass runs at a time and it always drains everything left pending."""
+    _gen_rerun.set()
+    if not _gen_lock.acquire(blocking=False):
+        return  # a pass is already running; it will honor the rerun flag
+    try:
+        while _gen_rerun.is_set():
+            _gen_rerun.clear()
+            while True:
+                nxt = _next_pending_meeting()
+                if nxt is None:
+                    break
+                meeting_id, persona = nxt
+                # generate_one_task flips the row to generating -> ready|error, so
+                # the next query won't re-select it (no infinite loop on failure).
+                generate_one_task(meeting_id, persona)
+    finally:
+        _gen_lock.release()
+
+
+def requeue_meeting_briefs(session: Session, meeting: models.Meeting) -> None:
+    """Reset a meeting's briefs to queued and clear their content — used when a
+    calendar edit changed the prospect company, so generate_pending_briefs rebuilds
+    the primary brief for the new company (the other personas stay lazy)."""
+    for b in session.exec(
+        select(models.Brief).where(models.Brief.meeting_id == meeting.id)
+    ).all():
+        b.status = "pending"
+        b.content_json = None
+        b.html = None
+        b.error = None
+        b.generated_at = None
+        session.add(b)
+    meeting.brief_status = "pending"
+    session.add(meeting)
+
+
+def reset_stale_generating() -> int:
+    """On startup, any brief left 'generating' by a killed process has no worker
+    behind it — requeue it as 'pending' so the date-ordered worker picks it up.
+    Returns how many meetings were requeued. Must run only at startup (never while
+    a live generation is in flight)."""
+    n = 0
+    with Session(engine) as session:
+        stale = session.exec(
+            select(models.Meeting).where(models.Meeting.brief_status == "generating")
+        ).all()
+        for meeting in stale:
+            meeting.brief_status = "pending"
+            session.add(meeting)
+            primary = session.exec(
+                select(models.Brief).where(
+                    models.Brief.meeting_id == meeting.id,
+                    models.Brief.persona == meeting.persona,
+                )
+            ).first()
+            if primary is not None:
+                primary.status = "pending"
+                session.add(primary)
+            n += 1
+        session.commit()
+    return n
+
+
 def build_meeting_with_briefs(
     session: Session,
     *,
@@ -91,13 +183,16 @@ def build_meeting_with_briefs(
     why: str = "",
     agenda: str = "",
     persona: str = "ae",
+    primary_status: str = "generating",
     google_event_id: Optional[str] = None,
     google_html_link: Optional[str] = None,
 ) -> models.Meeting:
-    """Create a Meeting and seed its three persona Brief rows. Does NOT schedule
-    generation — the caller decides (BackgroundTasks for the API request, or a
-    direct generate_one_task() call for the Google-sync background path). Reused by
-    both create_meeting and the calendar importer so they stay in lockstep."""
+    """Create a Meeting and seed its three persona Brief rows. Does NOT run
+    generation — the caller decides how: create_meeting schedules the primary brief
+    immediately (primary_status="generating" + a BackgroundTask), while the calendar
+    importer only queues it (primary_status="pending") for the date-ordered
+    generate_pending_briefs worker to pick up. Reused by both so they stay in
+    lockstep."""
     meeting = models.Meeting(
         subject=subject,
         prospect_company=prospect_company,
@@ -105,7 +200,7 @@ def build_meeting_with_briefs(
         why=why,
         agenda=agenda,
         start_time=start_time,
-        brief_status="generating",
+        brief_status=primary_status,
         persona=persona,
         google_event_id=google_event_id,
         google_html_link=google_html_link,
@@ -113,11 +208,10 @@ def build_meeting_with_briefs(
     session.add(meeting)
     session.commit()
     session.refresh(meeting)
-    # Primary persona generates first; the other two are lazy (on first view).
+    # Primary persona uses primary_status; the other two are lazy (on first view).
     for p in ALL_PERSONAS:
-        st = "generating" if p == persona else "pending"
+        st = primary_status if p == persona else "pending"
         session.add(models.Brief(meeting_id=meeting.id, persona=p, status=st))
-    meeting.brief_status = "generating"
     session.add(meeting)
     session.commit()
     session.refresh(meeting)

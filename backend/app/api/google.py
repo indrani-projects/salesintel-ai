@@ -9,10 +9,11 @@ Endpoints:
 """
 from __future__ import annotations
 
+import re
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
-from fastapi import APIRouter, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response, status
 from fastapi.responses import RedirectResponse
 from sqlmodel import Session, select
 
@@ -64,22 +65,84 @@ def google_disconnect() -> Response:
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
-    """Return (slug, display_name) if a known prospect appears in the event.
+# Display names for the enrichment companies (docs/shared research guide). These
+# have NO docs/ folder — the web-first intel path builds their briefs by name.
+_HINT_DISPLAY = {
+    "freshworks": "Freshworks",
+    "braze": "Braze",
+    "sproutsocial": "Sprout Social",
+    "amplitude": "Amplitude",
+    "zuora": "Zuora",
+}
 
-    Matches on the *normalized* company name (lowercased, leading "the" dropped,
-    non-alphanumerics -> underscores) so titles like "Discovery call with Sleep
-    Company" still resolve to "The Sleep Company" (slug sleep_company)."""
+# Words that mark a calendar event as a sales/prospect meeting (vs. a personal
+# event). Used only for the generic "any company" fallback so we don't import
+# "Lunch with Mom".
+_MEETING_WORDS = re.compile(
+    r"\b(call|meeting|sync|demo|intro\w*|discovery|pitch|deal|prospect|"
+    r"brief\w*|kick[- ]?off|qbr|poc|review|catch[- ]?up|check[- ]?in|"
+    r"onboard\w*|account|sales)\b",
+    re.IGNORECASE,
+)
+# "... with <Company>" — capture the company that a meeting is *with*.
+_WITH_RE = re.compile(r"\bwith\s+(.+)$", re.IGNORECASE)
+# Trailing noise to trim off an extracted company name.
+_TRAILING = re.compile(
+    r"\s*\b(team|folks|group|call|meeting|sync|demo|about|re|regarding)\b.*$",
+    re.IGNORECASE,
+)
+
+
+def _extract_company_from_title(summary: str) -> Optional[str]:
+    """Best-effort generic company name from a sales-meeting-style title, e.g.
+    'Discovery call with Acme Corp' -> 'Acme Corp'. Returns None if the title
+    doesn't read like a prospect meeting (keeps personal events out)."""
+    if not summary or not _MEETING_WORDS.search(summary):
+        return None
+    m = _WITH_RE.search(summary)
+    if not m:
+        return None
+    cand = _TRAILING.sub("", m.group(1)).strip(" -–—:,")
+    return cand or None
+
+
+def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
+    """Return (slug, display_name) if a prospect appears in the event.
+
+    Three tiers, most-confident first:
+      1. A company with a local docs/ folder (returns its slug).
+      2. One of the enrichment companies from docs/shared (no slug -> web-first).
+      3. Generic: any company named in a sales-meeting-style title (no slug).
+
+    Matching uses the *normalized* name (lowercased, leading "the" dropped,
+    non-alphanumerics -> underscores) so 'Discovery call with Sleep Company'
+    still resolves to 'The Sleep Company'."""
+    summary = event.get("summary", "") or ""
     hay = sources._normalize(
         " ".join(
-            [event.get("summary", ""), event.get("description", "")]
+            [summary, event.get("description", "")]
             + list(event.get("attendees", []))
         )
     )
+
+    # 1) Known company with docs (highest confidence).
     for c in sources.list_companies():
         key = sources._normalize(c.name)  # "The Sleep Company" -> "sleep_company"
         if key and key in hay:
             return c.slug, c.name
+
+    # 2) Enrichment company from the research guide (web-first, no docs folder).
+    for name_key, display in _HINT_DISPLAY.items():
+        if sources._normalize(display) in hay:
+            return None, display
+
+    # 3) Generic: extract any company from a sales-meeting-style title. The
+    #    web-first intel path builds the brief by name (a company_hints entry, if
+    #    one matches the extracted name, enriches it — but isn't required).
+    name = _extract_company_from_title(summary)
+    if name:
+        return None, name
+
     return None, None
 
 
@@ -97,49 +160,98 @@ def _parse_start(s: Optional[str]) -> datetime:
         return datetime.utcnow()
 
 
-@router.post("/integrations/google/calendar/sync", response_model=CalendarSyncResult)
-def calendar_sync() -> CalendarSyncResult:
-    """Import upcoming Google Calendar events that match a known prospect into
-    meetings (+ briefs). Deduped by google_event_id; non-prospect events are skipped."""
-    if not google_service.is_connected():
-        raise HTTPException(status_code=400, detail="Google is not connected.")
+def import_calendar_events() -> Tuple[int, int, int, int]:
+    """Reconcile Google Calendar prospect events into meetings. New events are
+    imported (primary brief queued 'pending'); events already imported are UPDATED
+    in place if the rep edited them in Google (subject/time always; company change
+    also requeues the brief so it rebuilds for the new prospect). Unchanged events
+    are skipped. Brief generation is NOT done here — it is handed to
+    meetings_api.generate_pending_briefs so sync stays fast and generation runs in
+    the background, in meeting-date order.
 
+    Returns (scanned, imported, updated, skipped). Callers (the sync endpoint and the
+    startup pass) trigger generate_pending_briefs after this returns."""
     events = google_service.list_events()
     scanned = len(events)
-    imported = skipped = 0
+    imported = updated = skipped = 0
 
     with Session(engine) as session:
         for e in events:
             slug, name = _match_prospect(e)
-            if not slug:
-                continue  # not a known prospect — leave it in Google, don't import
-            exists = session.exec(
+            if not name:
+                continue  # not a prospect — leave it in Google, don't import
+            new_subject = e.get("summary", "") or f"Meeting with {name}"
+            new_start = _parse_start(e.get("start"))
+            existing = session.exec(
                 select(models.Meeting).where(models.Meeting.google_event_id == e["id"])
             ).first()
-            if exists:
+
+            if existing is None:
+                meetings_api.build_meeting_with_briefs(
+                    session,
+                    subject=new_subject,
+                    prospect_company=name,
+                    why="Imported from Google Calendar",
+                    agenda=e.get("description", "") or "",
+                    start_time=new_start,
+                    persona="ae",
+                    primary_status="pending",  # queued for the background worker
+                    google_event_id=e["id"],
+                    google_html_link=e.get("html_link"),
+                )
+                imported += 1
+                continue
+
+            # Already imported — apply any edit the rep made in Google.
+            company_changed = sources._normalize(existing.prospect_company) != sources._normalize(name)
+            subject_changed = (existing.subject or "") != new_subject
+            time_changed = existing.start_time != new_start
+            if not (company_changed or subject_changed or time_changed):
                 skipped += 1
                 continue
-            meeting = meetings_api.build_meeting_with_briefs(
-                session,
-                subject=e.get("summary", "") or f"Meeting with {name}",
-                prospect_company=name,
-                why="Imported from Google Calendar",
-                agenda=e.get("description", "") or "",
-                start_time=_parse_start(e.get("start")),
-                persona="ae",
-                google_event_id=e["id"],
-                google_html_link=e.get("html_link"),
-            )
-            # Background poller has no BackgroundTasks — generate_one_task opens its
-            # own session and runs synchronously here.
-            meetings_api.generate_one_task(meeting.id, "ae")
-            imported += 1
 
+            existing.subject = new_subject
+            existing.start_time = new_start
+            existing.agenda = e.get("description", "") or existing.agenda
+            if e.get("html_link"):
+                existing.google_html_link = e.get("html_link")
+            if company_changed:
+                existing.prospect_company = name
+                existing.company_slug = slug or sources.resolve_company_slug(name)
+                # Rebuild the brief for the new prospect.
+                meetings_api.requeue_meeting_briefs(session, existing)
+            session.add(existing)
+            session.commit()
+            updated += 1
+
+    return scanned, imported, updated, skipped
+
+
+@router.post("/integrations/google/calendar/sync", response_model=CalendarSyncResult)
+def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
+    """Import upcoming prospect events into meetings (fast), then kick off brief
+    generation in the background (earliest meeting first). Non-prospect events are
+    skipped; existing ones are deduped by google_event_id."""
+    if not google_service.is_connected():
+        raise HTTPException(status_code=400, detail="Google is not connected.")
+
+    scanned, imported, updated, skipped = import_calendar_events()
+    if imported or updated:
+        background_tasks.add_task(meetings_api.generate_pending_briefs)
+
+    changed = imported + updated
     return CalendarSyncResult(
         imported=imported,
-        briefed=imported,
+        briefed=changed,
         skipped_existing=skipped,
         scanned=scanned,
-        message=f"Scanned {scanned} event(s); imported {imported} prospect meeting(s), "
-        f"{skipped} already present.",
+        message=(
+            f"Scanned {scanned} event(s); imported {imported} prospect meeting(s), "
+            f"updated {updated} changed, {skipped} unchanged. "
+            + (
+                "Briefs are generating in the background."
+                if changed
+                else "Nothing to (re)brief."
+            )
+        ),
     )

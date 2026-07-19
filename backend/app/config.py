@@ -63,6 +63,10 @@ class Settings(BaseSettings):
     # When true, google_service returns canned events / no-op send — used by tests
     # and E2E so verification never contacts Google.
     mock_google: bool = False
+    # On server start, auto-sync the calendar (import only) and then generate any
+    # queued briefs in the background, earliest meeting first. Off in tests/E2E so
+    # the explicit-sync assertions run against a clean, un-raced DB.
+    sync_on_startup: bool = True
 
     # ---- Web prospect intel (fetch news / SEC filings / social by company name) ----
     # On meeting creation the brief pulls live web intel for the prospect, keyword-
