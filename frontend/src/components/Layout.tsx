@@ -99,16 +99,15 @@ function UserFooter({ online, configured }: { online: boolean; configured: boole
             {user ? PERSONA_LABELS[user.persona] : ""}
           </span>
         </div>
-        <button
-          type="button"
-          onClick={onLogout}
-          title="Sign out"
-          aria-label="Sign out"
-          className="shrink-0 rounded-md p-1.5 text-nav-ink/70 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
       </div>
+      <button
+        type="button"
+        onClick={onLogout}
+        className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-[13px] font-semibold text-nav-ink transition-colors hover:bg-white/10 hover:text-white"
+      >
+        <LogOut className="h-4 w-4" />
+        Sign out
+      </button>
     </div>
   );
 }

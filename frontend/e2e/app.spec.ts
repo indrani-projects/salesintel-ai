@@ -44,6 +44,11 @@ test("login page signs in with a persona and lands on the app", async ({ page })
   await page.getByRole("button", { name: /enter workspace/i }).click();
   await expect(page).toHaveURL(/\/calendar/);
   await expect(page.getByText("Rohan M.").first()).toBeVisible(); // sidebar reflects the user
+
+  // Sign out returns to the login page.
+  await page.getByRole("button", { name: /sign out/i }).click();
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
 test("app shell renders with the workspace nav", async ({ page }) => {
