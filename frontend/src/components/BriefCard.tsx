@@ -17,11 +17,16 @@ import { downloadElementAsPdf, safeFilename } from "../lib/pdf";
 import { StatusBadge } from "./StatusBadge";
 import { PersonaBadge } from "./PersonaBadge";
 import { renderBriefToHtml } from "../lib/briefHtml";
+import { useAuth } from "../lib/auth";
 
 export function BriefCard({ meeting }: { meeting: MeetingRead }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [downloading, setDownloading] = useState(false);
+  // Show the persona the signed-in user works as (their brief), not just the
+  // meeting's primary — so a Revenue Operations Manager sees their own label.
+  const displayPersona = user?.persona ?? meeting.persona;
 
   const regen = useMutation({
     mutationFn: () => regenerateBrief(meeting.id),
@@ -64,7 +69,7 @@ export function BriefCard({ meeting }: { meeting: MeetingRead }) {
         </h3>
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           <StatusBadge status={meeting.brief_status} />
-          <PersonaBadge persona={meeting.persona} />
+          <PersonaBadge persona={displayPersona} />
         </div>
       </div>
 
