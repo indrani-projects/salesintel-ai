@@ -100,7 +100,7 @@
 // ── Single source of truth. Update `status` fields as work lands. ──────────
 // status: "todo" | "doing" | "done" | "blocked"
 const DATA = {
-  lastUpdated: "2026-07-25 · + recurring Google Calendar auto-sync (30s) & live UI refresh, scheduled day-before persona email with per-persona routing, and a demo login with persona picker — pytest + npm build + Playwright 7/7 green",
+  lastUpdated: "2026-07-25 · + calendar auto-sync (30s) with deletion reconciliation, 1-hour-before persona email (corrected from day-before) with per-persona routing, single-active-persona login (fresh Scout on login), and PDF brief email — pytest + npm build + Playwright 7/7 green",
   phases: [
     { name:"Setup — Runtimes & Environments", owner:"Lead", epics:[
       { id:"ENV", name:"Prerequisites", stories:[
@@ -347,32 +347,40 @@ const DATA = {
         { id:"S47.1", desc:"calendar_sync_loop daemon every 30s (CALENDAR_SYNC_ENABLED/SECONDS); off in tests/E2E", owner:"Lead", status:"done" },
         { id:"S47.2", desc:"sync_calendar_once — fail-soft: an expired token returns None, the loop never dies", owner:"Lead", status:"done" },
       ]},
-      { id:"E48", name:"Resilience + live UI", stories:[
+      { id:"E48", name:"Resilience, live UI + deletions", stories:[
         { id:"S48.1", desc:"Manual sync returns a clear 400 'reconnect Google' (was a raw 500) on invalid_grant", owner:"Lead", status:"done" },
         { id:"S48.2", desc:"Calendar/Dashboard 15s idle poll → auto-synced meetings appear without a manual refresh", owner:"Frontend", status:"done" },
-        { id:"S48.3", desc:"pytest +3 google tests · Playwright 6/6 · live: scheduler imported 2 meetings after reconnect", owner:"Lead", status:"done" },
+        { id:"S48.3", desc:"Deletion reconciliation: a meeting whose Google event was deleted (in-window) is removed; delete_meeting_cascade; bounded + authoritative-only", owner:"Lead", status:"done" },
+        { id:"S48.4", desc:"pytest (incl. deletion test) · Playwright 7/7 · live: scheduler imported 2 meetings after reconnect, removed deleted ones", owner:"Lead", status:"done" },
       ]},
     ]},
-    { name:"Phase 14 — Day-Before Persona Email · SI-16", owner:"Lead", epics:[
-      { id:"E49", name:"Day-before trigger", stories:[
-        { id:"S49.1", desc:"send_due_day_before (24h window) + Meeting.day_before_sent_at guard + migration; DAY_BEFORE_* config", owner:"Lead", status:"done" },
-        { id:"S49.2", desc:"_send_due refactor; on-ready send doubles as day-before/reminder when already in-window", owner:"Lead", status:"done" },
+    { name:"Phase 14 — 1-Hour-Before Persona Email · SI-16", owner:"Lead", epics:[
+      { id:"E49", name:"Pre-meeting email (1 hour before)", stories:[
+        { id:"S49.1", desc:"Persona brief emailed when start_time is within REMINDER_LEAD_MINUTES (60); reminder_sent_at guard; rides the reminder loop", owner:"Lead", status:"done" },
+        { id:"S49.2", desc:"_send_due refactor; on-ready send doubles as the pre-meeting send when already in-window (no near-dup)", owner:"Lead", status:"done" },
       ]},
       { id:"E50", name:"Per-persona routing + surfacing", stories:[
-        { id:"S50.1", desc:"PERSONA_EMAILS + recipient_for_persona; all triggers email the meeting persona's address", owner:"Lead", status:"done" },
-        { id:"S50.2", desc:"EmailAutomationStatus day_before + personalized; Settings card shows the Day-before line", owner:"Frontend", status:"done" },
-        { id:"S50.3", desc:"pytest (window/idempotency/routing) · npm build · Playwright 6/6", owner:"Lead", status:"done" },
+        { id:"S50.1", desc:"PERSONA_EMAILS + recipient_for_persona; both triggers email the meeting persona's address, else default", owner:"Lead", status:"done" },
+        { id:"S50.2", desc:"EmailAutomationStatus personalized; Settings card shows 'Before the meeting: within 60 min' + persona routing", owner:"Frontend", status:"done" },
+        { id:"S50.3", desc:"Corrected from a day-before to a 1-hour window (day_before tier/config/guard removed); pytest · build · Playwright 7/7", owner:"Lead", status:"done" },
       ]},
     ]},
-    { name:"Phase 15 — Demo Login & Persona Selection · SI-17", owner:"Lead", epics:[
+    { name:"Phase 15 — Demo Login & Single Active Persona · SI-17", owner:"Lead", epics:[
       { id:"E51", name:"Auth gate + login page", stories:[
         { id:"S51.1", desc:"Client-side auth context (localStorage) + RequireAuth guard (lib/auth, App.tsx, main.tsx)", owner:"Frontend", status:"done" },
         { id:"S51.2", desc:"Split-screen login UI (name / password / persona picker); sidebar user + Sign out button", owner:"Frontend", status:"done" },
       ]},
-      { id:"E52", name:"Persona default + auto-generate", stories:[
-        { id:"S52.1", desc:"Selected persona is the default (MeetingDialog + BriefView); logout returns to /login", owner:"Frontend", status:"done" },
-        { id:"S52.2", desc:"POST /briefs/generate → generate_persona_briefs on login (idempotent across all meetings)", owner:"Lead", status:"done" },
-        { id:"S52.3", desc:"pytest generate endpoint · npm build · Playwright 7/7 (login + sign-out flow)", owner:"Lead", status:"done" },
+      { id:"E52", name:"Single active persona + fresh Scout", stories:[
+        { id:"S52.1", desc:"AppState.active_persona; PUT/GET /session/persona (sets + generates); calendar sync uses get_active_persona (no default Sales Rep)", owner:"Lead", status:"done" },
+        { id:"S52.2", desc:"BriefView shows ONLY the user's persona tab; MeetingDialog persona picker → read-only 'your role' chip", owner:"Frontend", status:"done" },
+        { id:"S52.3", desc:"Clear Scout chat on login (PUT /session/persona deletes ChatMessages; frontend drops ['chat'] cache)", owner:"Lead", status:"done" },
+        { id:"S52.4", desc:"pytest (session persona sets+generates+clears chat) · build · Playwright 7/7 (single tab; login + sign-out)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 16 — Email PDF attachment + non-tech explainer · SI-6", owner:"Lead", epics:[
+      { id:"E53", name:"PDF brief attachment", stories:[
+        { id:"S53.1", desc:"Brief email attaches a PDF (xhtml2pdf, pure-Python) instead of .html; fail-soft to HTML; Gmail + SMTP use application/pdf", owner:"Lead", status:"done" },
+        { id:"S53.2", desc:"docs/HOW_IT_WORKS.html — plain-English explainer (tech stack, two planes, data journey, brief); pytest · build · Playwright 7/7", owner:"Lead", status:"done" },
       ]},
     ]},
   ]

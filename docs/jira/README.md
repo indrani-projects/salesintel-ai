@@ -1,7 +1,7 @@
 # SalesIntel AI — MVP 1 Jira Backlog (demo pack)
 
 This folder is a **paste-ready Jira backlog** for the SalesIntel AI POC. It re-frames
-everything that was actually built into **17 product epics and 72 stories**, so a PM can
+everything that was actually built into **17 product epics and 75 stories**, so a PM can
 copy each file straight into Jira (Epic → Stories) with no translation.
 
 > **What this is:** a back-fill of already-delivered work into a clean, capability-shaped
@@ -27,7 +27,7 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-3** | AI Brief Generation Engine | `03-brief-engine/` | 6 | Highest |
 | **SI-4** | Multi-Persona Briefs (AE / SDR / SE) — *superseded by SI-14* | `04-multi-persona-briefs/` | 4 | High |
 | **SI-5** | Scout Chatbot (Grounded Q&A) | `05-scout-chatbot/` | 3 | Medium |
-| **SI-6** | Brief Delivery: Web View & Email | `06-brief-delivery-email/` | 5 | High |
+| **SI-6** | Brief Delivery: Web View & Email (PDF attachment) | `06-brief-delivery-email/` | 5 | High |
 | **SI-7** | Application Experience & Visual Design | `07-app-experience-design/` | 5 | Medium |
 | **SI-8** | Quality, Testing & Demo Readiness | `08-quality-testing-demo/` | 5 | High |
 | **SI-9** | Engineering Workflow & Tooling | `09-engineering-workflow-tooling/` | 5 | High |
@@ -36,9 +36,9 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-12** | Web-to-Doc Prospect Prep (Plane A · no LLM) | `12-web-doc-prep/` | 4 | High |
 | **SI-13** | Zoho Product Catalog (Plane B · no LLM) | `13-zoho-catalog/` | 3 | High |
 | **SI-14** | Persona Refresh — 6 personas from the persona doc (supersedes SI-4) | `14-persona-refresh/` | 4 | High |
-| **SI-15** | Recurring Google Calendar Auto-Sync (+ token expiry + live UI) | `15-calendar-autosync/` | 3 | High |
-| **SI-16** | Scheduled Day-Before Persona Email (+ per-persona routing) | `16-day-before-email/` | 3 | High |
-| **SI-17** | Demo Login & Persona Selection | `17-demo-login/` | 4 | Medium |
+| **SI-15** | Recurring Google Calendar Auto-Sync (+ token expiry, deletion, live UI) | `15-calendar-autosync/` | 4 | High |
+| **SI-16** | Scheduled 1-Hour-Before Persona Email (+ per-persona routing) | `16-hour-before-email/` | 3 | High |
+| **SI-17** | Demo Login & Persona Selection (single active persona) | `17-demo-login/` | 6 | Medium |
 
 ## The product in one paragraph
 
