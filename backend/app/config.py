@@ -84,6 +84,14 @@ class Settings(BaseSettings):
     auto_email_enabled: bool = True
     reminder_lead_minutes: int = 60   # send the reminder this long before start_time
     reminder_poll_seconds: int = 60   # how often the reminder scheduler wakes up
+    # Additionally email the (persona) brief ~1 day before the meeting, once the brief
+    # is ready. Fires when the meeting enters the day-before window; guarded per meeting.
+    day_before_email_enabled: bool = True
+    day_before_lead_minutes: int = 1440   # 24h before start_time
+    # Per-persona recipient override: persona key -> email address. Set as JSON in .env:
+    #   PERSONA_EMAILS='{"sales_rep":"rohan@acme.com","vp_sales":"vp@acme.com"}'
+    # A meeting's auto-emails go to ITS persona's address here; else default_recipient.
+    persona_emails: dict[str, str] = {}
 
     # ---- Web prospect intel (fetch news / SEC filings / social by company name) ----
     # On meeting creation the brief pulls live web intel for the prospect, keyword-
@@ -127,6 +135,11 @@ class Settings(BaseSettings):
     @property
     def email_from(self) -> str:
         return (self.smtp_from or self.smtp_user).strip()
+
+    def recipient_for_persona(self, persona: str) -> str:
+        """Auto-email recipient for a persona: its PERSONA_EMAILS entry if set, else
+        the default_recipient (so behaviour is unchanged when no mapping is configured)."""
+        return (self.persona_emails.get(persona) or self.default_recipient or "").strip()
 
     @property
     def google_configured(self) -> bool:

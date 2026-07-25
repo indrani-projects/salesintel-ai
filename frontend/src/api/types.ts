@@ -194,4 +194,7 @@ export interface EmailAutomationStatus {
   lead_minutes: number;
   recipient: string;
   transport: "gmail" | "smtp" | "demo";
+  day_before_enabled: boolean;
+  day_before_minutes: number;
+  personalized: boolean;
 }

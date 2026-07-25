@@ -26,7 +26,7 @@ from sqlmodel import Session, select
 from app import models
 from app.config import settings
 from app.db import engine
-from app.schemas import BriefContent
+from app.schemas import PERSONA_LABELS, BriefContent
 from app.services import email_service
 
 
@@ -50,6 +50,10 @@ def automation_status() -> dict:
         "lead_minutes": settings.reminder_lead_minutes,
         "recipient": (settings.default_recipient or "").strip(),
         "transport": _transport(),
+        "day_before_enabled": settings.day_before_email_enabled,
+        "day_before_minutes": settings.day_before_lead_minutes,
+        # True when at least one persona has its own recipient (per-persona routing).
+        "personalized": bool(settings.persona_emails),
     }
 
 
@@ -80,13 +84,9 @@ def _send(content: BriefContent, recipient: str, subject_override: Optional[str]
 def send_ready_email(meeting_id: int) -> None:
     """Email a meeting's brief once, when it becomes ready. No-op unless the brief is
     ready, the meeting is still upcoming, and it hasn't already been sent. If the
-    meeting is already inside the reminder window, this send also satisfies the
-    reminder (stamps reminder_sent_at) so the scheduler won't re-send minutes later."""
-    recipient = (settings.default_recipient or "").strip()
-    if not recipient:
-        print("[auto-email] DEFAULT_RECIPIENT is blank — skipping ready email", flush=True)
-        return
-
+    meeting is already inside the reminder / day-before window, this send also
+    satisfies those (stamps their guards) so the scheduler won't re-send later.
+    Recipient is the meeting persona's address (PERSONA_EMAILS), else default."""
     now = datetime.utcnow()
     try:
         with Session(engine) as session:
@@ -95,6 +95,11 @@ def send_ready_email(meeting_id: int) -> None:
                 return
             if meeting.start_time is None or meeting.start_time <= now:
                 return  # only email upcoming meetings
+            recipient = settings.recipient_for_persona(meeting.persona)
+            if not recipient:
+                print("[auto-email] no recipient (persona/DEFAULT_RECIPIENT) — "
+                      "skipping ready email", flush=True)
+                return
             content = _load_ready_primary(session, meeting)
             if content is None:
                 return
@@ -102,9 +107,14 @@ def send_ready_email(meeting_id: int) -> None:
             result = _send(content, recipient)
             if result.mode != "error":
                 meeting.ready_email_sent_at = now
-                lead = timedelta(minutes=settings.reminder_lead_minutes)
-                if meeting.reminder_sent_at is None and meeting.start_time <= now + lead:
-                    meeting.reminder_sent_at = now  # doubles as the reminder
+                if meeting.reminder_sent_at is None and meeting.start_time <= now + timedelta(
+                    minutes=settings.reminder_lead_minutes
+                ):
+                    meeting.reminder_sent_at = now  # doubles as the 1-hour reminder
+                if meeting.day_before_sent_at is None and meeting.start_time <= now + timedelta(
+                    minutes=settings.day_before_lead_minutes
+                ):
+                    meeting.day_before_sent_at = now  # doubles as the day-before send
                 session.add(meeting)
                 session.commit()
             print(
@@ -116,23 +126,20 @@ def send_ready_email(meeting_id: int) -> None:
         print(f"[auto-email] send_ready_email({meeting_id}) failed: {exc}", flush=True)
 
 
-def send_due_reminders() -> int:
-    """Send the 1-hour reminder for every upcoming ready meeting now inside the lead
-    window that hasn't been reminded yet. Returns how many were sent. Per-meeting
-    fail-soft so one bad send never blocks the rest."""
-    recipient = (settings.default_recipient or "").strip()
-    if not recipient:
-        return 0
-
+def _send_due(guard: str, window_minutes: int, subject_fn) -> int:
+    """Shared engine for the timed sends. For every upcoming ready meeting now inside
+    `window_minutes` whose `guard` column is still NULL, send the persona brief (to the
+    persona's address) and stamp the guard. Per-meeting fail-soft. Returns count sent."""
     now = datetime.utcnow()
-    window_end = now + timedelta(minutes=settings.reminder_lead_minutes)
+    window_end = now + timedelta(minutes=window_minutes)
+    guard_col = getattr(models.Meeting, guard)
     sent = 0
     with Session(engine) as session:
         due = session.exec(
             select(models.Meeting)
             .where(
                 models.Meeting.brief_status == "ready",
-                models.Meeting.reminder_sent_at == None,  # noqa: E711 (SQL IS NULL)
+                guard_col == None,  # noqa: E711 (SQL IS NULL)
                 models.Meeting.start_time > now,
                 models.Meeting.start_time <= window_end,
             )
@@ -141,28 +148,48 @@ def send_due_reminders() -> int:
 
         for meeting in due:
             try:
+                recipient = settings.recipient_for_persona(meeting.persona)
+                if not recipient:
+                    continue
                 content = _load_ready_primary(session, meeting)
                 if content is None:
                     continue
                 company = content.company or meeting.prospect_company or "your prospect"
-                subject = (
-                    f"[SalesIntel] Reminder — {company} meeting in "
-                    f"~{settings.reminder_lead_minutes} min"
-                )
-                result = _send(content, recipient, subject_override=subject)
+                result = _send(content, recipient, subject_override=subject_fn(meeting, company))
                 if result.mode != "error":
-                    meeting.reminder_sent_at = now
+                    setattr(meeting, guard, now)
                     session.add(meeting)
                     session.commit()
                     sent += 1
                 print(
-                    f"[auto-email] reminder for meeting {meeting.id} "
-                    f"({meeting.prospect_company}): {result.mode}",
+                    f"[auto-email] {guard} for meeting {meeting.id} "
+                    f"({meeting.prospect_company} · {meeting.persona}) -> {recipient}: {result.mode}",
                     flush=True,
                 )
             except Exception as exc:  # noqa: BLE001
-                print(f"[auto-email] reminder failed for meeting {meeting.id}: {exc}", flush=True)
+                print(f"[auto-email] {guard} failed for meeting {meeting.id}: {exc}", flush=True)
     return sent
+
+
+def send_due_reminders() -> int:
+    """Send the 1-hour reminder for every ready meeting now inside the lead window."""
+    return _send_due(
+        "reminder_sent_at",
+        settings.reminder_lead_minutes,
+        lambda m, company: f"[SalesIntel] Reminder — {company} meeting in "
+        f"~{settings.reminder_lead_minutes} min",
+    )
+
+
+def send_due_day_before() -> int:
+    """Send the ~1-day-before brief for every ready meeting now inside the day-before
+    window. Recipient is the meeting persona's address (PERSONA_EMAILS), else default."""
+    return _send_due(
+        "day_before_sent_at",
+        settings.day_before_lead_minutes,
+        lambda m, company: f"[SalesIntel] {PERSONA_LABELS.get(m.persona, 'Brief')} — "
+        f"{company} meeting coming up",
+    )
 
 
 def reminder_loop() -> None:
@@ -170,12 +197,15 @@ def reminder_loop() -> None:
     Fully fail-soft — a transient error just retries on the next tick."""
     poll = max(5, settings.reminder_poll_seconds)
     print(
-        f"[auto-email] reminder scheduler started "
-        f"(lead={settings.reminder_lead_minutes}m, poll={poll}s)",
+        f"[auto-email] reminder scheduler started (day-before="
+        f"{settings.day_before_lead_minutes}m, reminder={settings.reminder_lead_minutes}m, "
+        f"poll={poll}s)",
         flush=True,
     )
     while True:
         try:
+            if settings.day_before_email_enabled:
+                send_due_day_before()
             send_due_reminders()
         except Exception as exc:  # noqa: BLE001 — the loop must never die
             print(f"[auto-email] reminder loop error: {exc}", flush=True)

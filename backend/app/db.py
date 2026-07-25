@@ -22,6 +22,7 @@ _ADDED_COLUMNS = {
         "google_html_link": "VARCHAR",
         "ready_email_sent_at": "DATETIME",
         "reminder_sent_at": "DATETIME",
+        "day_before_sent_at": "DATETIME",
     },
 }
 
