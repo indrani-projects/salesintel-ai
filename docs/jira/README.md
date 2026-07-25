@@ -1,7 +1,7 @@
 # SalesIntel AI — MVP 1 Jira Backlog (demo pack)
 
 This folder is a **paste-ready Jira backlog** for the SalesIntel AI POC. It re-frames
-everything that was actually built into **14 product epics and 62 stories**, so a PM can
+everything that was actually built into **17 product epics and 72 stories**, so a PM can
 copy each file straight into Jira (Epic → Stories) with no translation.
 
 > **What this is:** a back-fill of already-delivered work into a clean, capability-shaped
@@ -36,6 +36,9 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-12** | Web-to-Doc Prospect Prep (Plane A · no LLM) | `12-web-doc-prep/` | 4 | High |
 | **SI-13** | Zoho Product Catalog (Plane B · no LLM) | `13-zoho-catalog/` | 3 | High |
 | **SI-14** | Persona Refresh — 6 personas from the persona doc (supersedes SI-4) | `14-persona-refresh/` | 4 | High |
+| **SI-15** | Recurring Google Calendar Auto-Sync (+ token expiry + live UI) | `15-calendar-autosync/` | 3 | High |
+| **SI-16** | Scheduled Day-Before Persona Email (+ per-persona routing) | `16-day-before-email/` | 3 | High |
+| **SI-17** | Demo Login & Persona Selection | `17-demo-login/` | 4 | Medium |
 
 ## The product in one paragraph
 
