@@ -18,7 +18,7 @@ _BASE = {
     "prospect_company": "The Sleep Company",
     "why": "Scale retail",
     "agenda": "Omnichannel",
-    "persona": "ae",
+    "persona": "sales_rep",
 }
 
 

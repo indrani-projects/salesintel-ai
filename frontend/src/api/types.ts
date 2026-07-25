@@ -4,20 +4,39 @@ export type BriefStatus = "pending" | "generating" | "ready" | "error";
 
 export type Confidence = "high" | "medium" | "low";
 
-export type Persona = "ae" | "sdr" | "se";
+export type Persona =
+  | "sales_rep"
+  | "sales_manager"
+  | "enablement"
+  | "revops"
+  | "vp_sales"
+  | "admin";
 
-export const PERSONA_ORDER: Persona[] = ["ae", "sdr", "se"];
+export const PERSONA_ORDER: Persona[] = [
+  "sales_rep",
+  "sales_manager",
+  "enablement",
+  "revops",
+  "vp_sales",
+  "admin",
+];
 
 export const PERSONA_LABELS: Record<Persona, string> = {
-  ae: "Account Executive",
-  sdr: "Sales Development Rep",
-  se: "Solutions Engineer",
+  sales_rep: "Sales Representative",
+  sales_manager: "Sales Manager",
+  enablement: "Sales Enablement",
+  revops: "Revenue Operations Manager",
+  vp_sales: "VP of Sales",
+  admin: "SalesIntel AI Admin",
 };
 
 export const PERSONA_TAGLINES: Record<Persona, string> = {
-  ae: "Full pre-call brief — discovery to close",
-  sdr: "Prospecting brief — earn the meeting",
-  se: "Technical fit brief — prep the deep-dive",
+  sales_rep: "Prepare fast for every customer meeting",
+  sales_manager: "Coach the team, improve win rates",
+  enablement: "Standardize prep, accelerate onboarding",
+  revops: "Drive adoption and prove ROI",
+  vp_sales: "Measure business impact and revenue growth",
+  admin: "Secure, reliable platform operations",
 };
 
 // The nine fixed sections of every brief, in display order.

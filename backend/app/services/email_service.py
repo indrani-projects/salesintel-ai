@@ -47,7 +47,7 @@ def _safe_filename(name: str) -> str:
 
 def _digest_body_html(brief: BriefContent) -> str:
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     persona_tagline = PERSONA_TAGLINES.get(persona, "")
     company = html.escape(brief.company or brief.company_slug or "Prospect")
     headline = html.escape(brief.headline or "")
@@ -117,7 +117,7 @@ def _digest_body_html(brief: BriefContent) -> str:
 
 def _plain_text(brief: BriefContent) -> str:
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     lines = [f"{brief.company} — {persona_label} Pre-Sales Brief", ""]
     if brief.headline:
         lines += [brief.headline, ""]
@@ -130,7 +130,7 @@ def _plain_text(brief: BriefContent) -> str:
 def compose_brief_email(brief: BriefContent) -> ComposedEmail:
     """Build the persona-tailored email (subject + body + attachment) for a brief."""
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     company = brief.company or brief.company_slug or "Prospect"
 
     subject = f"[SalesIntel] {persona_label} Brief — {company}"

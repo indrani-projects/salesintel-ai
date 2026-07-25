@@ -95,7 +95,7 @@ export function BriefView() {
     }
   }, [meeting, activePersona]);
 
-  const viewPersona: Persona = activePersona ?? meeting?.persona ?? "ae";
+  const viewPersona: Persona = activePersona ?? meeting?.persona ?? "sales_rep";
 
   const { data: brief, isLoading } = useQuery({
     queryKey: ["brief", meetingId, viewPersona],
@@ -241,7 +241,7 @@ export function BriefView() {
               {/* Hero card */}
               <section className="card p-6 sm:p-7">
                 <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11.5px] font-bold text-brand-700">
-                  {PERSONA_LABELS[viewPersona]} · Pre-Call Brief
+                  {PERSONA_LABELS[viewPersona]} · Brief
                 </span>
                 <h1 className="mt-3 text-[26px] font-bold leading-tight tracking-tight text-ink-900 text-balance">
                   {brief.content.company}

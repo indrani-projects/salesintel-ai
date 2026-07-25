@@ -6,7 +6,7 @@ NEW_MEETING = {
     "why": "Scale retail + B2B",
     "agenda": "Omnichannel data + support",
     "start_time": "2026-07-20T10:30:00",
-    "persona": "ae",
+    "persona": "sales_rep",
 }
 
 

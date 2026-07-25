@@ -38,7 +38,7 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
   const [why, setWhy] = useState("");
   const [agenda, setAgenda] = useState("");
   const [start, setStart] = useState(toLocalInput(initialStart));
-  const [persona, setPersona] = useState<Persona>("ae");
+  const [persona, setPersona] = useState<Persona>("sales_rep");
 
   useEffect(() => {
     if (open) {
@@ -47,7 +47,7 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
       setWhy("");
       setAgenda("");
       setStart(toLocalInput(initialStart));
-      setPersona("ae");
+      setPersona("sales_rep");
     }
   }, [open, initialStart]);
 
@@ -189,7 +189,7 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
 
           <div>
             <label className="label">Brief persona</label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {PERSONAS.map((p) => {
                 const active = persona === p;
                 const accent = PERSONA_ACCENTS[p];

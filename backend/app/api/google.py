@@ -194,7 +194,7 @@ def import_calendar_events() -> Tuple[int, int, int, int]:
                     why="Imported from Google Calendar",
                     agenda=e.get("description", "") or "",
                     start_time=new_start,
-                    persona="ae",
+                    persona="sales_rep",
                     primary_status="pending",  # queued for the background worker
                     google_event_id=e["id"],
                     google_html_link=e.get("html_link"),

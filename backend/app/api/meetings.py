@@ -22,7 +22,8 @@ from app.services import brief_engine, brief_render, sources
 
 router = APIRouter(tags=["meetings"])
 
-ALL_PERSONAS = ["ae", "sdr", "se"]
+# Fan-out set — one brief per persona. Derived from the enum so it stays in sync.
+ALL_PERSONAS = [p.value for p in Persona]
 
 
 # --------------------------------------------------------------------------- #
@@ -191,7 +192,7 @@ def build_meeting_with_briefs(
     start_time: datetime,
     why: str = "",
     agenda: str = "",
-    persona: str = "ae",
+    persona: str = "sales_rep",
     primary_status: str = "generating",
     google_event_id: Optional[str] = None,
     google_html_link: Optional[str] = None,

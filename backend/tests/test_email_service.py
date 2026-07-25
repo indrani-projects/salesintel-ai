@@ -26,12 +26,12 @@ def _brief(persona: str) -> BriefContent:
     )
 
 
-def test_compose_ae_highlights_angle_and_stakeholders():
-    composed = email_service.compose_brief_email(_brief("ae"))
-    assert "Account Executive" in composed.subject
+def test_compose_sales_rep_highlights_angle_and_stakeholders():
+    composed = email_service.compose_brief_email(_brief("sales_rep"))
+    assert "Sales Representative" in composed.subject
     assert "The Sleep Company" in composed.subject
-    assert composed.attachment_filename.endswith("-ae-brief.html")
-    # AE digest features the recommended angle + stakeholders sections.
+    assert composed.attachment_filename.endswith("-sales_rep-brief.html")
+    # Sales Rep digest features the recommended angle + stakeholders sections.
     # (Titles are HTML-escaped, so match on apostrophe-free substrings.)
     assert "Recommended Angle" in composed.body_html
     assert "Key Stakeholders" in composed.body_html
@@ -39,17 +39,17 @@ def test_compose_ae_highlights_angle_and_stakeholders():
 
 
 def test_compose_persona_specific_sections():
-    sdr = email_service.compose_brief_email(_brief("sdr"))
-    assert "Ready-to-Send Opener" in sdr.body_html
-    assert sdr.attachment_filename.endswith("-sdr-brief.html")
+    mgr = email_service.compose_brief_email(_brief("sales_manager"))
+    assert "Coaching Focus" in mgr.body_html
+    assert mgr.attachment_filename.endswith("-sales_manager-brief.html")
 
-    se = email_service.compose_brief_email(_brief("se"))
-    assert "Demo Focus" in se.body_html
-    assert se.attachment_filename.endswith("-se-brief.html")
+    vp = email_service.compose_brief_email(_brief("vp_sales"))
+    assert "Executive Recommendation" in vp.body_html
+    assert vp.attachment_filename.endswith("-vp_sales-brief.html")
 
 
 def test_send_is_demo_when_not_configured():
-    composed = email_service.compose_brief_email(_brief("ae"))
+    composed = email_service.compose_brief_email(_brief("sales_rep"))
     result = email_service.send_brief_email(composed, "rep@zoho.com")
     assert result.delivered is False
     assert result.mode == "demo"
@@ -57,7 +57,7 @@ def test_send_is_demo_when_not_configured():
 
 
 def test_send_rejects_empty_recipient():
-    composed = email_service.compose_brief_email(_brief("ae"))
+    composed = email_service.compose_brief_email(_brief("sales_rep"))
     result = email_service.send_brief_email(composed, "   ")
     assert result.delivered is False
     assert result.mode == "error"
@@ -70,7 +70,7 @@ def test_send_prefers_gmail_when_google_connected(monkeypatch):
 
     monkeypatch.setattr(s, "mock_email", False)   # allow real delivery path
     monkeypatch.setattr(s, "mock_google", True)   # "connected" + Gmail is a no-op
-    composed = email_service.compose_brief_email(_brief("sdr"))
+    composed = email_service.compose_brief_email(_brief("sales_manager"))
     result = email_service.send_brief_email(composed, "rep@zoho.com")
     assert result.mode == "gmail"
     assert result.recipient == "rep@zoho.com"

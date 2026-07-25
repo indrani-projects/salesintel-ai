@@ -87,7 +87,7 @@ function UserFooter({ online, configured }: { online: boolean; configured: boole
         <div className="leading-tight">
           Rohan M.
           <br />
-          <span className="text-[11px] text-faint">Account Executive</span>
+          <span className="text-[11px] text-faint">Sales Representative</span>
         </div>
       </div>
     </div>

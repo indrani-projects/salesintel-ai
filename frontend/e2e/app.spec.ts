@@ -3,7 +3,7 @@ import { test, expect, request as pwRequest } from "@playwright/test";
 const API = "http://localhost:8000";
 const SHOTS = "e2e/screenshots";
 
-async function seedMeeting(persona = "ae") {
+async function seedMeeting(persona = "sales_rep") {
   const ctx = await pwRequest.newContext();
   const res = await ctx.post(`${API}/meetings`, {
     data: {
@@ -45,32 +45,32 @@ test("create a meeting via the dialog lands on the dashboard", async ({ page }) 
   await expect(page.getByRole("dialog")).toBeHidden();
   await page.goto("/dashboard");
   await expect(page.getByText("Freshworks").first()).toBeVisible();
-  await expect(page.getByText("Account Executive").first()).toBeVisible();
+  await expect(page.getByText("Sales Representative").first()).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/03-dashboard.png`, fullPage: true });
 });
 
 test("brief view renders, toggles personas, and Scout answers", async ({ page }) => {
-  const id = await seedMeeting("ae");
+  const id = await seedMeeting("sales_rep");
   await page.goto(`/meeting/${id}`);
 
-  // AE brief
+  // Sales Representative brief (full nine sections)
   await expect(page.getByRole("heading", { name: "The Sleep Company", level: 1 })).toBeVisible();
-  await expect(page.getByText("Account Executive · Pre-Call Brief")).toBeVisible();
+  await expect(page.getByText("Sales Representative · Brief")).toBeVisible();
   await expect(page.getByText("ARR")).toBeVisible();          // KPI strip
   await expect(page.getByText("₹700 Cr")).toBeVisible();
-  await expect(page.getByRole("heading", { name: /Pain Hypotheses/ })).toBeVisible(); // an AE section
+  await expect(page.getByRole("heading", { name: /Pain Hypotheses/ })).toBeVisible(); // a Sales Rep section
   await expect(page.getByText(/Ready · \d+ source/)).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/04-brief-ae.png`, fullPage: true });
+  await page.screenshot({ path: `${SHOTS}/04-brief-sales-rep.png`, fullPage: true });
 
-  // Toggle → SDR (distinct section set)
-  await page.getByRole("tab", { name: "Sales Development Rep" }).click();
-  await expect(page.getByRole("heading", { name: "Ready-to-Send Opener" })).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${SHOTS}/05-brief-sdr.png`, fullPage: true });
+  // Toggle → Sales Manager (distinct coaching section set)
+  await page.getByRole("tab", { name: "Sales Manager" }).click();
+  await expect(page.getByRole("heading", { name: "Coaching Focus" })).toBeVisible({ timeout: 20_000 });
+  await page.screenshot({ path: `${SHOTS}/05-brief-sales-manager.png`, fullPage: true });
 
-  // Toggle → SE
-  await page.getByRole("tab", { name: "Solutions Engineer" }).click();
-  await expect(page.getByRole("heading", { name: /Demo Focus/ })).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${SHOTS}/06-brief-se.png`, fullPage: true });
+  // Toggle → VP of Sales (executive section set)
+  await page.getByRole("tab", { name: "VP of Sales" }).click();
+  await expect(page.getByRole("heading", { name: /Executive Recommendation/ })).toBeVisible({ timeout: 20_000 });
+  await page.screenshot({ path: `${SHOTS}/06-brief-vp-sales.png`, fullPage: true });
 
   // Scout answers ("Send" exact — distinct from the toolbar's "Send as email")
   await page.getByPlaceholder("Ask Scout…").fill("Who led their last round?");
@@ -106,7 +106,7 @@ test("settings shows the automated-emails card", async ({ page }) => {
 });
 
 test("send-as-email composes a persona digest and demo-sends", async ({ page }) => {
-  const id = await seedMeeting("ae");
+  const id = await seedMeeting("sales_rep");
   await page.goto(`/meeting/${id}`);
   await expect(page.getByRole("heading", { name: "The Sleep Company", level: 1 })).toBeVisible();
 
@@ -117,8 +117,8 @@ test("send-as-email composes a persona digest and demo-sends", async ({ page }) 
 
   // Recipient prefilled, subject + attachment composed, preview rendered.
   await expect(dialog.getByLabel("To")).not.toHaveValue("");
-  await expect(dialog.getByText(/Account Executive Brief/)).toBeVisible({ timeout: 20_000 });
-  await expect(dialog.getByText(/-ae-brief\.html/)).toBeVisible();
+  await expect(dialog.getByText(/Sales Representative Brief/)).toBeVisible({ timeout: 20_000 });
+  await expect(dialog.getByText(/-sales_rep-brief\.html/)).toBeVisible();
   await expect(dialog.getByText(/Demo mode/)).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/08-email-dialog.png`, fullPage: true });
 

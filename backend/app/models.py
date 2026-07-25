@@ -24,7 +24,7 @@ class Meeting(SQLModel, table=True):
     start_time: datetime
     created_at: datetime = Field(default_factory=datetime.utcnow)
     brief_status: str = "pending"      # mirrors the PRIMARY persona's brief status
-    persona: str = "ae"                # the meeting's primary/selected persona
+    persona: str = "sales_rep"         # the meeting's primary/selected persona
     # Google Calendar link (set when imported from / pushed to Google). Used to
     # dedupe calendar syncs and to deep-link to the event.
     google_event_id: Optional[str] = Field(default=None, index=True)
@@ -36,12 +36,12 @@ class Meeting(SQLModel, table=True):
 
 
 class Brief(SQLModel, table=True):
-    # One brief per (meeting, persona) — a meeting can have AE / SDR / SE briefs.
+    # One brief per (meeting, persona) — a meeting can have a brief per persona.
     __table_args__ = (UniqueConstraint("meeting_id", "persona", name="uq_brief_meeting_persona"),)
 
     id: Optional[int] = Field(default=None, primary_key=True)
     meeting_id: int = Field(foreign_key="meeting.id", index=True)
-    persona: str = "ae"
+    persona: str = "sales_rep"
     status: str = "pending"
     content_json: Optional[str] = None  # serialized BriefContent
     html: Optional[str] = None
