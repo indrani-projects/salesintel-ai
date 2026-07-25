@@ -378,7 +378,7 @@ def render_html(brief: BriefContent) -> str:
     sources_html = _render_sources(brief.sources)
 
     pv = getattr(brief.persona, "value", str(brief.persona))
-    persona_label = PERSONA_LABELS.get(pv, "Account Executive")
+    persona_label = PERSONA_LABELS.get(pv, "Sales Representative")
     persona_tagline = PERSONA_TAGLINES.get(pv, "")
 
     headline_html = f'<p class="headline">{headline}</p>' if headline else ""

@@ -24,10 +24,53 @@ export function ChatPanel({ meetingId, disabled }: Props) {
 
   const mutation = useMutation({
     mutationFn: (question: string) => postChat(meetingId, question),
-    onSuccess: () => {
+    // Optimistic update: show the user's message in the thread immediately (so it
+    // never disappears while Scout thinks). onSettled refetches the real history,
+    // replacing the temporary message; onError rolls it back.
+    onMutate: async (question: string) => {
+      await queryClient.cancelQueries({ queryKey: ["chat", meetingId] });
+      const prev =
+        queryClient.getQueryData<ChatMessageRead[]>(["chat", meetingId]) ?? [];
+      const optimistic: ChatMessageRead = {
+        id: -Date.now(),
+        meeting_id: meetingId,
+        role: "user",
+        content: question,
+        created_at: new Date().toISOString(),
+      };
+      queryClient.setQueryData<ChatMessageRead[]>(
+        ["chat", meetingId],
+        [...prev, optimistic],
+      );
+      return { prev };
+    },
+    onError: (_err, _question, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["chat", meetingId], ctx.prev);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["chat", meetingId] });
     },
   });
+
+  // Rotate a friendly in-progress label while Scout works.
+  const THINKING_PHRASES = [
+    "Reading the brief…",
+    "Searching the sources…",
+    "Thinking it through…",
+  ];
+  const [phraseIdx, setPhraseIdx] = useState(0);
+  useEffect(() => {
+    if (!mutation.isPending) {
+      setPhraseIdx(0);
+      return;
+    }
+    const t = setInterval(
+      () => setPhraseIdx((i) => (i + 1) % THINKING_PHRASES.length),
+      1600,
+    );
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mutation.isPending]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
@@ -110,10 +153,15 @@ export function ChatPanel({ meetingId, disabled }: Props) {
 
         {mutation.isPending && (
           <div className="flex justify-start">
-            <div className="flex items-center gap-1 rounded-xl rounded-bl-[4px] bg-[#f2f4f9] px-4 py-3">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint [animation-delay:-0.3s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint [animation-delay:-0.15s]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-faint" />
+            <div className="flex items-center gap-2 rounded-xl rounded-bl-[4px] bg-[#f2f4f9] px-3.5 py-2.5">
+              <span className="flex gap-1">
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-600 [animation-delay:-0.3s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-600 [animation-delay:-0.15s]" />
+                <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-600" />
+              </span>
+              <span className="text-[12.5px] font-medium text-muted">
+                {THINKING_PHRASES[phraseIdx]}
+              </span>
             </div>
           </div>
         )}

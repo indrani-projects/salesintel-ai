@@ -14,6 +14,7 @@ from typing import List, Optional, Tuple
 from app.config import settings
 from app.contracts import SourceDoc
 from app.schemas import (
+    DEFAULT_PERSONA,
     PERSONA_LABELS,
     BriefContent,
     BriefSection,
@@ -26,7 +27,7 @@ from app.services.llm_client import get_client, get_model
 from app.services.sources import (
     COMPANY_NAMES,
     _display_name,
-    load_company_sources,
+    load_company_intel,
     resolve_company_slug,
 )
 
@@ -40,31 +41,50 @@ _BASE_SYSTEM = (
     "low-confidence claims."
 )
 
-# Persona-specific framing appended to the system prompt.
+# Persona-specific framing appended to the system prompt. Keyed by the six personas
+# in docs/shared/Expected_Features_By_Persona.
 _PERSONA_FRAMING = {
-    "ae": (
-        "The reader is an ACCOUNT EXECUTIVE preparing to run discovery and "
-        "advance/close the deal. Give the full business picture and a clear, "
-        "synthesized recommended angle. Tailor emphasis to the meeting's why/agenda."
+    "sales_rep": (
+        "The reader is a SALES REPRESENTATIVE preparing to run a customer meeting. "
+        "Give the full business picture and a clear, synthesized recommended angle. "
+        "Tailor emphasis to the meeting's why/agenda so they can prepare fast."
     ),
-    "sdr": (
-        "The reader is a SALES DEVELOPMENT REP doing COLD OUTBOUND. Their ONLY "
-        "goal is to earn a first meeting — NOT to pitch or close. Be brief and "
-        "action-oriented. The outreach opener must be copy-paste ready. Do not "
-        "write a full sales pitch or deep financial analysis."
+    "sales_manager": (
+        "The reader is a SALES MANAGER who will COACH the rep on this deal, not run "
+        "the meeting themselves. Focus on where to guide the rep, the deal risks to "
+        "inspect, and the questions the manager should ask the rep. Be direct and "
+        "coaching-oriented; aim at improving win rates."
     ),
-    "se": (
-        "The reader is a PRE-SALES SOLUTIONS ENGINEER (technical expert) preparing "
-        "for a technical deep-dive / demo. Emphasize the current tech stack, "
-        "integration surface, technical fit, and a concrete demo plan. Minimize "
-        "generic business narrative; be specific and technical."
+    "enablement": (
+        "The reader is a SALES ENABLEMENT lead using this brief as a BEST-PRACTICE, "
+        "teachable example to standardize how reps prepare. Emphasize repeatable prep "
+        "steps, talking points, objection handling, and a readiness checklist a newly "
+        "onboarded rep could follow."
+    ),
+    "revops": (
+        "The reader is a REVENUE OPERATIONS MANAGER focused on adoption, process, and "
+        "ROI — not meeting tactics. Emphasize CRM data health/gaps, workflow fit, "
+        "automation opportunities, and a measurable ROI and adoption angle."
+    ),
+    "vp_sales": (
+        "The reader is a VP OF SALES who needs the executive, board-level view. Be "
+        "concise and outcome-oriented: strategic fit, revenue opportunity, win "
+        "probability, competitive dynamics, and a crisp executive recommendation. "
+        "Omit tactical minutiae."
+    ),
+    "admin": (
+        "The reader is the SALESINTEL AI ADMIN responsible for platform reliability "
+        "and data governance. This brief is a DATA-PROVENANCE view, NOT a sales pitch: "
+        "inventory the [S#] sources that fed the brief and their type/tags, trace key "
+        "facts back to their sources, and flag coverage gaps, stale data, "
+        "integration/field-mapping issues, and quality risks."
     ),
 }
 
 # Extra guidance for specific section ids. Sections not listed here are
 # self-explanatory from their title.
 _SECTION_GUIDANCE = {
-    # AE
+    # --- Sales Representative (full brief) ---
     "pain_hypotheses": (
         "Map the prospect's concrete situation (growth, retail expansion, "
         "D2C/omnichannel, hiring, funding pressure) to SPECIFIC Zoho "
@@ -75,53 +95,106 @@ _SECTION_GUIDANCE = {
         "YOUR synthesized analyst take — the sharpest way for the rep to open and "
         "steer the meeting given the why/agenda. May connect dots but stay grounded."
     ),
-    # SDR
-    "hook": (
-        "The single sharpest, most recent trigger event that earns a reply — one "
-        "or two concrete sentences."
-    ),
-    "target_contact": (
-        "Which role/title to target for cold outbound and WHY them; name specific "
-        "people if they appear in the sources."
-    ),
-    "value_hypothesis": "ONE sentence: why Zoho matters to this prospect right now.",
-    "outreach_opener": (
-        "Write an ACTUAL outreach message the rep can copy-paste: an email with a "
-        "subject line and a 2-3 sentence body referencing the trigger, PLUS a "
-        "one-line phone/LinkedIn opener. Personalized, concise, no fluff."
-    ),
-    "qualifying_questions": (
-        "3 sharp questions to qualify and book the meeting, plus a one-line "
-        "pre-empt for the 'we already have a CRM' objection."
-    ),
-    # SE
     "tech_stack": (
         "What the prospect runs today (ecommerce platform, marketplaces, any "
         "inferable CRM/helpdesk/telephony) and the inferred architecture. Note "
         "clearly what is inferred vs explicitly stated in the sources."
     ),
-    "integration_landscape": (
-        "The systems Zoho must integrate with (ecommerce, marketplaces, "
-        "telephony/WhatsApp, POS across stores, ERP) and the integration approach "
-        "for each, grounded in the tech signals."
+    # --- Sales Manager (coaching) ---
+    "coaching_focus": (
+        "Where the manager should coach the rep for THIS deal: the two or three "
+        "skills/moves that most change the outcome (discovery depth, multithreading, "
+        "value framing), tied to concrete signals in the sources."
     ),
-    "technical_fit": (
-        "The technical problems (data fragmentation across channels, no single "
-        "customer view, ticket volume at scale) mapped to SPECIFIC Zoho modules "
-        "and HOW they'd be configured."
+    "deal_risks": (
+        "The risks a manager should inspect: single-threaded, weak champion, "
+        "budget/timing, competitor incumbency — each with what to check."
     ),
-    "demo_focus": (
-        "A tailored demo plan: which Zoho features/flows to show, in what order, "
-        "given this prospect's situation (e.g. omnichannel Customer 360, Desk SLAs "
-        "for warranty/returns, marketplace sync)."
+    "rep_questions": (
+        "Specific questions the manager should ask the rep in a 1:1 deal review to "
+        "expose gaps and next steps."
     ),
-    "technical_objections": (
-        "Likely technical objections (scale, data migration, customization limits, "
-        "data residency, security/compliance) each with a concrete technical response."
+    "next_steps": "The concrete next actions to drive the deal forward, in priority order.",
+    # --- Sales Enablement (best practice / onboarding) ---
+    "best_practice_prep": (
+        "The repeatable prep steps a rep should follow before a meeting like this — "
+        "written so a newly onboarded rep could copy the process."
     ),
-    "open_questions": (
-        "Technical discovery questions the SE should ask on the call to close "
-        "knowledge gaps (current CRM/helpdesk, data volumes, integration constraints)."
+    "talking_points": "The 3-5 highest-leverage talking points, each grounded in a source.",
+    "objection_handling": (
+        "Likely objections (price, incumbent tool, switching cost) each with a crisp, "
+        "on-message response the team can standardize on."
+    ),
+    "playbook_alignment": (
+        "How this opportunity maps to the standard sales play / messaging pillars, so "
+        "prep stays consistent across reps."
+    ),
+    "readiness_checklist": (
+        "A short pre-meeting readiness checklist (research done, stakeholders "
+        "identified, materials ready) the rep can tick off."
+    ),
+    # --- Revenue Operations Manager (adoption / ROI) ---
+    "data_health": (
+        "Gaps and quality issues in the account data available (missing firmographics, "
+        "stale signals, unverified claims) and what CRM fields would need to be filled."
+    ),
+    "process_fit": (
+        "Where Zoho fits the prospect's operating processes and workflows, and where "
+        "process change or integration is required."
+    ),
+    "automation_opportunities": (
+        "Concrete workflows that could be automated (lead routing, approvals, renewals) "
+        "mapped to Zoho capabilities, citing sources."
+    ),
+    "roi_hypothesis": (
+        "A measurable ROI hypothesis: the cost/efficiency lever, a rough magnitude, and "
+        "the metric that would prove it — grounded, clearly labelled as an estimate."
+    ),
+    "adoption_angle": (
+        "How to drive adoption and land-and-expand for this account (which team first, "
+        "rollout sequence, governance)."
+    ),
+    # --- VP of Sales (executive) ---
+    "strategic_fit": "Why this account matters strategically (segment, expansion, reference value).",
+    "revenue_opportunity": (
+        "The revenue opportunity: deal size band and expansion potential, clearly "
+        "labelled as an estimate where inferred."
+    ),
+    "win_risk": "Win probability drivers and the top risks to the number, concisely.",
+    "competitive_landscape": (
+        "Incumbent/competitor tools in play and Zoho's displacement wedge, grounded in "
+        "the sources."
+    ),
+    "exec_recommendation": (
+        "A crisp executive recommendation: pursue/support level, the one thing that "
+        "must go right, and the ask."
+    ),
+    # --- SalesIntel AI Admin (data provenance / quality) ---
+    "source_inventory": (
+        "Inventory the [S#] sources that fed this brief: for each, its title, type/tag "
+        "(web/prospect/zoho/prepared), and URL/file if present. Note relative "
+        "trustworthiness (official/regulatory/press vs forum/blog)."
+    ),
+    "data_lineage": (
+        "Trace the brief's key factual claims back to the specific [S#] source(s) that "
+        "support them, so each fact is auditable."
+    ),
+    "coverage_gaps": (
+        "What's missing or thin: source types not present (e.g. no financial filing, no "
+        "official site), unverified claims, and single-sourced facts."
+    ),
+    "data_freshness": (
+        "How current the underlying signals appear (recent news vs undated pages) and "
+        "any staleness to flag."
+    ),
+    "integration_status": (
+        "Which channels/integrations supplied data (web feeds, prepared docs, local "
+        "docs) and any field-mapping/coverage issues an admin should address."
+    ),
+    "quality_flags": (
+        "Concrete quality/governance flags: low-credibility sources relied on, possible "
+        "entity mismatches, and anything that should be reviewed before the brief is "
+        "trusted."
     ),
 }
 
@@ -402,23 +475,37 @@ def _mock_brief(company, company_slug, persona, persona_sections, sources) -> Br
     )
 
 
+def _slugify(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (name or "").lower()).strip("_") or "prospect"
+
+
 def generate_brief(
-    company_slug: str,
+    company_slug: Optional[str],
     subject: str,
     why: str,
     agenda: str,
-    persona: str = "ae",
+    persona: str = DEFAULT_PERSONA,
+    company_name: Optional[str] = None,
 ) -> BriefContent:
-    persona = persona if persona in PERSONA_LABELS else "ae"
-    slug = resolve_company_slug(company_slug) or company_slug
-    company = COMPANY_NAMES.get(slug) or _display_name(slug)
+    persona = persona if persona in PERSONA_LABELS else DEFAULT_PERSONA
+    slug = resolve_company_slug(company_slug) if company_slug else None
+    # Display name: prefer the meeting's free-text company (handles unknown companies
+    # with no docs folder), else the slug-derived name.
+    if company_name:
+        company = company_name
+    elif slug:
+        company = COMPANY_NAMES.get(slug) or _display_name(slug)
+    else:
+        company = _display_name(company_slug) if company_slug else "Prospect"
+    slug = slug or _slugify(company)
     persona_sections = sections_for(persona)
 
-    sources = load_company_sources(slug)
+    # Web-first intel by company NAME (cached), falling back to docs/<slug>/.
+    sources = load_company_intel(company, slug)
 
     if settings.mock_llm:
         return _mock_brief(company, slug, persona, persona_sections, sources)
-    system = _BASE_SYSTEM + "\n\n" + _PERSONA_FRAMING.get(persona, _PERSONA_FRAMING["ae"])
+    system = _BASE_SYSTEM + "\n\n" + _PERSONA_FRAMING.get(persona, _PERSONA_FRAMING[DEFAULT_PERSONA])
     user = _user_prompt(company, subject, why, agenda, sources, persona_sections)
 
     last_err: Optional[Exception] = None

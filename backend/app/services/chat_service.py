@@ -18,7 +18,7 @@ from app.schemas import (
     ChatResponse,
 )
 from app.services.llm_client import get_client, get_model
-from app.services.sources import load_company_sources
+from app.services.sources import load_company_intel
 
 SYSTEM_PROMPT = (
     "You are a grounded pre-sales assistant answering a Zoho sales rep's follow-up "
@@ -96,7 +96,9 @@ def answer_question(
             grounded=True,
         )
 
-    sources = load_company_sources(company_slug)
+    # Web-first intel by the brief's company name (cached — no re-fetch per turn),
+    # falling back to docs/<slug>/. Same prepared intel the brief used.
+    sources = load_company_intel(getattr(brief, "company", "") or company_slug, company_slug)
 
     context = (
         "=== BRIEF ===\n"

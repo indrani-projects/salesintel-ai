@@ -3,9 +3,12 @@ import type {
   BriefRead,
   ChatMessageRead,
   ChatResponse,
+  CalendarSyncResult,
   CompanyRead,
+  EmailAutomationStatus,
   EmailPreview,
   EmailSendResult,
+  GoogleStatus,
   HealthResponse,
   MeetingCreate,
   MeetingRead,
@@ -25,6 +28,18 @@ export const api = axios.create({
 export async function listCompanies(): Promise<CompanyRead[]> {
   const { data } = await api.get<CompanyRead[]>("/companies");
   return data;
+}
+
+// Queue background generation of a persona's brief across ALL meetings (called on
+// login so the selected persona's briefs are generated automatically).
+export async function generateBriefsForPersona(persona: Persona): Promise<void> {
+  await api.post("/briefs/generate", null, { params: { persona } });
+}
+
+// Set the signed-in user's active persona (server-side) AND queue generation of that
+// persona's briefs. From here on, calendar sync / imports use this persona.
+export async function setSessionPersona(persona: Persona): Promise<void> {
+  await api.put("/session/persona", null, { params: { persona } });
 }
 
 export async function listMeetings(): Promise<MeetingRead[]> {
@@ -70,6 +85,31 @@ export async function postChat(id: number, question: string): Promise<ChatRespon
 
 export async function getHealth(): Promise<HealthResponse> {
   const { data } = await api.get<HealthResponse>("/health");
+  return data;
+}
+
+// ---- Google integration ----
+/** Full URL to start the OAuth connect flow (navigate the browser here). */
+export const googleLoginUrl = () => `${API_BASE_URL}/auth/google/login`;
+
+export async function getGoogleStatus(): Promise<GoogleStatus> {
+  const { data } = await api.get<GoogleStatus>("/integrations/google/status");
+  return data;
+}
+
+export async function syncGoogleCalendar(): Promise<CalendarSyncResult> {
+  const { data } = await api.post<CalendarSyncResult>("/integrations/google/calendar/sync");
+  return data;
+}
+
+export async function disconnectGoogle(): Promise<void> {
+  await api.delete("/integrations/google/disconnect");
+}
+
+export async function getEmailAutomation(): Promise<EmailAutomationStatus> {
+  const { data } = await api.get<EmailAutomationStatus>(
+    "/integrations/email/automation",
+  );
   return data;
 }
 

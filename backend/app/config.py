@@ -52,6 +52,66 @@ class Settings(BaseSettings):
     # verification never contacts a real mail server.
     mock_email: bool = False
 
+    # ---- Google (one OAuth: Gmail send + Calendar) ----
+    # Create an OAuth client at console.cloud.google.com (see .env.example /
+    # docs/RUNBOOK). Redirect URI must match the registered one exactly.
+    google_client_id: str = ""
+    google_client_secret: str = ""
+    google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
+    # Where the OAuth callback sends the browser back to (the app's Settings page).
+    frontend_url: str = "http://localhost:5173"
+    # When true, google_service returns canned events / no-op send — used by tests
+    # and E2E so verification never contacts Google.
+    mock_google: bool = False
+    # On server start, auto-sync the calendar (import only) and then generate any
+    # queued briefs in the background, earliest meeting first. Off in tests/E2E so
+    # the explicit-sync assertions run against a clean, un-raced DB.
+    sync_on_startup: bool = True
+    # Recurring background Google Calendar sync: a daemon thread re-imports prospect
+    # events every `calendar_sync_seconds` (and queues briefs for new/changed ones),
+    # so meetings added in Google appear without a manual "Sync" click. Fail-soft —
+    # an expired token just logs and retries. Off in tests/E2E so it can't race the
+    # explicit-sync assertions.
+    calendar_sync_enabled: bool = True
+    calendar_sync_seconds: int = 30
+
+    # ---- Automated brief emails ----
+    # When on, a meeting's brief is emailed automatically as soon as it's ready, and
+    # again `reminder_lead_minutes` before the meeting start_time. Recipient is
+    # `default_recipient`; delivery uses the same Gmail/SMTP/demo path as manual send.
+    # Master switch — off in tests/E2E so the on-ready hook and the reminder daemon
+    # can't interfere with deterministic assertions.
+    auto_email_enabled: bool = True
+    # The (persona) brief is emailed once the brief is ready, and again when the meeting
+    # is within reminder_lead_minutes of its start (default 60 — i.e. in about an hour).
+    reminder_lead_minutes: int = 60   # send the pre-meeting email this long before start
+    reminder_poll_seconds: int = 60   # how often the reminder scheduler wakes up
+    # Per-persona recipient override: persona key -> email address. Set as JSON in .env:
+    #   PERSONA_EMAILS='{"sales_rep":"rohan@acme.com","vp_sales":"vp@acme.com"}'
+    # A meeting's auto-emails go to ITS persona's address here; else default_recipient.
+    persona_emails: dict[str, str] = {}
+
+    # ---- Web prospect intel (fetch news / SEC filings / social by company name) ----
+    # On meeting creation the brief pulls live web intel for the prospect, keyword-
+    # filters it (no LLM), caches the filtered text, and feeds it to the brief + Scout.
+    # Falls back to docs/<company>/ when the web returns nothing.
+    web_intel_enabled: bool = True
+    web_ttl_hours: int = 24          # cached filtered-intel freshness
+    web_max_chars: int = 6000        # cap on cached text per source
+    # When true, web_sources returns deterministic canned intel — tests/E2E, no network.
+    mock_web: bool = False
+
+    # ---- Prepared web docs (deterministic foundation stage, NO LLM) ----
+    # `python -m app.tools.prepare "<company>"` fetches real web pages + Wikipedia,
+    # extracts the main text (trafilatura), keeps only passages matching the research-
+    # guide keywords, scores source credibility, and caches clean Markdown +
+    # manifest.json under backend/.cache/prepared/<slug>/. load_company_intel prefers
+    # these over the live feeds when present. `mock_web` disables all prep network.
+    prep_enabled: bool = True
+    prep_max_results: int = 10       # candidate result URLs per company (before Wikipedia)
+    prep_ttl_hours: int = 168        # prepared docs are heavier to build — cache a week
+    prep_max_doc_chars: int = 8000   # cap on each prepared Markdown doc
+
     @property
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
@@ -73,6 +133,16 @@ class Settings(BaseSettings):
     @property
     def email_from(self) -> str:
         return (self.smtp_from or self.smtp_user).strip()
+
+    def recipient_for_persona(self, persona: str) -> str:
+        """Auto-email recipient for a persona: its PERSONA_EMAILS entry if set, else
+        the default_recipient (so behaviour is unchanged when no mapping is configured)."""
+        return (self.persona_emails.get(persona) or self.default_recipient or "").strip()
+
+    @property
+    def google_configured(self) -> bool:
+        """True when an OAuth client is set (so the Connect flow can run)."""
+        return bool(self.google_client_id.strip() and self.google_client_secret.strip())
 
     @property
     def docs_root_path(self) -> Path:

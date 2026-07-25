@@ -143,6 +143,77 @@ backend an SMTP account. Easiest is Gmail:
 
 ---
 
+## 2c. Optional — Google (Gmail send + Calendar), one OAuth
+
+Connect your Google account once to (a) send brief emails **from your Gmail** and
+(b) **two-way sync Google Calendar** — prospect meetings on your calendar import and
+auto-generate briefs; meetings you add in the app push out as Google events. All
+optional: leave it unset and email falls back to SMTP/demo and the calendar stays
+local. `MOCK_GOOGLE=1` (tests/E2E) never touches Google.
+
+**One-time Google Cloud setup (~15 min), at https://console.cloud.google.com:**
+1. Sign in with the Gmail to use; **create a project** (e.g. `SalesIntel`).
+2. **APIs & Services → Library →** enable **Gmail API** and **Google Calendar API**.
+3. **OAuth consent screen:** User type **External**; app name + your email; **add
+   scopes** `gmail.send`, `calendar.events`, `openid`, `userinfo.email`; **add your
+   Gmail as a Test user**; keep publishing status **Testing** (no Google review for
+   your own account).
+4. **Credentials → Create Credentials → OAuth client ID → Web application →**
+   Authorized redirect URI **exactly** `http://localhost:8000/auth/google/callback`
+   (also add `https://<your-ngrok-domain>/api/auth/google/callback` if you'll
+   connect while running `stack.ps1 share`).
+5. **Copy the Client ID + Client Secret** into `backend/.env`:
+   ```
+   GOOGLE_CLIENT_ID=...
+   GOOGLE_CLIENT_SECRET=...
+   GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+   FRONTEND_URL=http://localhost:5173
+   ```
+6. Restart the backend (`.\stack.ps1 restart`).
+
+**Connect:** in the app go to **Settings → Connect Google** → consent popup. Testing
+mode shows a *"Google hasn't verified this app"* notice → **Advanced → Go to
+SalesIntel (unsafe)** (safe: it's your own test app) → grant Gmail + Calendar. You'll
+land back on Settings showing **Connected**. Then **Sync calendar now** imports
+prospect meetings, and **Send as email** now sends from your Gmail.
+
+> Only events matching a known prospect (a folder in `docs/`, e.g. *The Sleep
+> Company*) are imported; other calendar events are ignored. Re-syncing is
+> idempotent (deduped by the Google event id). One connected account (POC).
+
+---
+
+## 2d. Optional — prepare prospect + Zoho catalog data (deterministic, NO LLM)
+
+Two one-off CLIs pre-build the app's data foundation. Both are **keyless, no-LLM, no-cost**
+(retrieval + extraction + filtering only) — run them once so demos are instant and briefs
+are richer. Skipping them is fine: the app falls back to live feeds and `docs/`.
+
+Run from `backend/` with the venv:
+
+```powershell
+# Plane A — prospect prep: read the open web for a company, keyword-filter (research
+# guide), credibility-score, and cache clean docs under backend/.cache/prepared/<slug>/
+.\.venv\Scripts\python.exe -m app.tools.prepare "Freshworks"     # one company
+.\.venv\Scripts\python.exe -m app.tools.prepare --all            # the 5 guide companies
+
+# Plane B — Zoho product catalog: fetch static zoho.com pages listed in
+# app/services/zoho_catalog.py → docs/zoho/products/*.md + docs/zoho/zoho_products_summary.md
+.\.venv\Scripts\python.exe -m app.tools.build_zoho_catalog
+```
+
+- `prepare` writes to the **git-ignored** `backend/.cache/prepared/`; it is cached with a
+  TTL (`PREP_TTL_HOURS`) and idempotent — re-running reuses a fresh cache. `--force` refetches.
+  `sources.load_company_intel()` prefers these prepared docs over the live feeds.
+- `build_zoho_catalog` regenerates the committed catalog. The compact
+  `zoho_products_summary.md` auto-loads into every brief; the full per-product docs live in
+  the `docs/zoho/products/` subfolder (not auto-injected). Curate the source list by editing
+  `app/services/zoho_catalog.py` and re-running. Note: the `help.zoho.com` KB portal is a
+  JS app and can't be read keyless — use static `www.zoho.com` product/help pages.
+- Both need network but **no API key and no LLM quota**. Not needed in tests/E2E (`MOCK_WEB`).
+
+---
+
 ## 3. Start the app
 
 **One command (recommended)** — from the repo root:
@@ -272,8 +343,9 @@ npm run build
 | POST | `/meetings/{id}/chat` | Ask a grounded question (brief must be `ready`) |
 | GET | `/meetings/{id}/chat` | Chat history |
 
-> Brief endpoints take an optional `?persona=ae|sdr|se` (defaults to the meeting's
-> primary persona).
+> Brief endpoints take an optional
+> `?persona=sales_rep|sales_manager|enablement|revops|vp_sales|admin` (the six personas
+> from the persona doc; defaults to the meeting's primary persona, `sales_rep`).
 
 ---
 
@@ -312,6 +384,11 @@ npm run build
 | `DEFAULT_RECIPIENT` | — | Prefills the "To" box in the Send-as-email dialog |
 | `MOCK_LLM` | `false` | `true` → canned briefs/chat (tests/E2E; no key, no quota) |
 | `MOCK_EMAIL` | `false` | `true` → never contacts a real mail server (tests/E2E) |
+| `WEB_INTEL_ENABLED` | `true` | Pull live keyless web intel (News/SEC/Reddit) on brief generation |
+| `PREP_ENABLED` | `true` | Enable the web-to-doc prep stage (`app.tools.prepare`); §2d |
+| `PREP_MAX_RESULTS` | `10` | Candidate result URLs per company before Wikipedia |
+| `PREP_TTL_HOURS` | `168` | Freshness window for `backend/.cache/prepared/` (a week) |
+| `MOCK_WEB` | `false` | `true` → canned web intel, no network (tests/E2E; disables prep fetch) |
 
 ---
 

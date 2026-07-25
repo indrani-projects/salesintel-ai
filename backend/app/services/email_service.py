@@ -1,7 +1,8 @@
 """Compose + (optionally) send a persona-tailored "Send as email" of a brief.
 
 Format C: the email BODY is a persona-tailored HTML digest (differs per persona)
-and the FULL brief is attached as a self-contained .html file.
+and the FULL brief is attached as a **PDF** (rendered server-side with xhtml2pdf —
+pure-Python, no system deps — so it previews as a document, not raw HTML).
 
 Delivery mirrors the LLM's mock pattern (see config.mock_llm): a real email is
 sent only when SMTP is configured AND settings.mock_email is off. Otherwise it's a
@@ -27,13 +28,6 @@ from app.schemas import (
 from app.services.brief_render import _md_to_html, render_html
 
 # Which two sections headline each persona's digest body — the "so what" per role.
-_DIGEST_SECTION_IDS = {
-    "ae": ["recommended_angle", "stakeholders"],
-    "sdr": ["outreach_opener", "target_contact"],
-    "se": ["demo_focus", "technical_objections"],
-}
-
-
 @dataclass
 class ComposedEmail:
     subject: str
@@ -41,6 +35,8 @@ class ComposedEmail:
     plain_text: str
     attachment_filename: str
     attachment_bytes: bytes
+    attachment_maintype: str = "application"
+    attachment_subtype: str = "pdf"
 
 
 def _persona_value(brief: BriefContent) -> str:
@@ -52,20 +48,9 @@ def _safe_filename(name: str) -> str:
     return (slug or "brief")[:80]
 
 
-def _highlight_sections(brief: BriefContent) -> List[Tuple[str, str]]:
-    """(title, content_md) pairs to feature in the digest body for this persona."""
-    by_id = {s.id: s for s in brief.sections}
-    persona = _persona_value(brief)
-    wanted = _DIGEST_SECTION_IDS.get(persona, [])
-    picked = [by_id[sid] for sid in wanted if sid in by_id]
-    if not picked:  # defensive: fall back to the first two sections
-        picked = brief.sections[:2]
-    return [(s.title, s.content_md) for s in picked]
-
-
 def _digest_body_html(brief: BriefContent) -> str:
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     persona_tagline = PERSONA_TAGLINES.get(persona, "")
     company = html.escape(brief.company or brief.company_slug or "Prospect")
     headline = html.escape(brief.headline or "")
@@ -85,13 +70,30 @@ def _digest_body_html(brief: BriefContent) -> str:
             f'style="margin:14px 0 2px;border-collapse:collapse;"><tr>{cells}</tr></table>'
         )
 
+    # Full brief in the body: every section, inline-styled so email clients render it.
     sections_html = "".join(
-        '<div style="margin:18px 0 0;">'
-        f'<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:5px;">{html.escape(title)}</div>'
-        f'<div style="font-size:14px;color:#334155;line-height:1.6;">{_md_to_html(content)}</div>'
+        '<div style="margin:20px 0 0;padding-top:16px;border-top:1px solid #eef1f5;">'
+        f'<div style="font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px;">'
+        f'<span style="color:#94a3b8;">{i}.</span> {html.escape(s.title)}</div>'
+        f'<div style="font-size:14px;color:#334155;line-height:1.6;">{_md_to_html(s.content_md)}</div>'
         "</div>"
-        for title, content in _highlight_sections(brief)
+        for i, s in enumerate(brief.sections, start=1)
     )
+
+    sources_html = ""
+    if brief.sources:
+        items = "".join(
+            f'<li style="margin:3px 0;"><b>{html.escape(src.marker)}</b> {html.escape(src.title)}'
+            + (f' <span style="color:#94a3b8;">- {html.escape(src.filename)}</span>' if src.filename else "")
+            + "</li>"
+            for src in brief.sources
+        )
+        sources_html = (
+            '<div style="margin-top:20px;padding-top:14px;border-top:1px solid #eef1f5;">'
+            '<div style="font-size:13px;font-weight:700;color:#0f172a;margin-bottom:6px;">Sources</div>'
+            f'<ul style="margin:0;padding-left:18px;font-size:12.5px;color:#475569;">{items}</ul>'
+            "</div>"
+        )
 
     headline_html = (
         f'<p style="margin:6px 0 0;font-size:15px;color:#475569;">{headline}</p>'
@@ -101,18 +103,16 @@ def _digest_body_html(brief: BriefContent) -> str:
 
     return f"""\
 <div style="background:#f4f6f9;padding:24px;">
-  <div style="max-width:640px;margin:0 auto;background:#ffffff;border:1px solid #e3e8ef;border-radius:14px;padding:28px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
+  <div style="max-width:660px;margin:0 auto;background:#ffffff;border:1px solid #e3e8ef;border-radius:14px;padding:28px 30px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1f2933;">
     <div style="text-transform:uppercase;letter-spacing:.12em;font-size:11px;font-weight:700;color:#c2410c;">{html.escape(persona_label)} &middot; Pre-Sales Brief</div>
     <h1 style="font-size:22px;line-height:1.25;margin:8px 0 0;color:#0f172a;">{company}</h1>
     {headline_html}
     <div style="font-size:12.5px;color:#64748b;margin-top:6px;">{html.escape(persona_tagline)}</div>
     {facts_html}
     {sections_html}
-    <div style="margin-top:22px;padding-top:14px;border-top:1px solid #eef1f5;font-size:13px;color:#475569;">
-      &#128206; The full {html.escape(persona_label)} brief is attached as an HTML file &mdash; open it in any browser.
-    </div>
-    <div style="margin-top:14px;font-size:11px;color:#94a3b8;">
-      Generated by SalesIntel AI. Grounded in the cited sources; claims marked &ldquo;verify before use&rdquo; are low-confidence.
+    {sources_html}
+    <div style="margin-top:22px;padding-top:14px;border-top:1px solid #eef1f5;font-size:12px;color:#94a3b8;">
+      Generated by SalesIntel AI. The same brief is also attached as a PDF for saving or forwarding. Claims marked &ldquo;verify before use&rdquo; are low-confidence.
     </div>
   </div>
 </div>"""
@@ -120,43 +120,112 @@ def _digest_body_html(brief: BriefContent) -> str:
 
 def _plain_text(brief: BriefContent) -> str:
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     lines = [f"{brief.company} — {persona_label} Pre-Sales Brief", ""]
     if brief.headline:
         lines += [brief.headline, ""]
-    for title, content in _highlight_sections(brief):
-        text = re.sub(r"\[(S\d+)\]", r"[\1]", content)
-        lines += [title.upper(), text.strip(), ""]
-    lines.append("The full brief is attached as an HTML file.")
+    for i, s in enumerate(brief.sections, start=1):
+        lines += [f"{i}. {s.title.upper()}", (s.content_md or "").strip(), ""]
+    lines.append("The same brief is also attached as a PDF.")
     return "\n".join(lines)
 
 
 def compose_brief_email(brief: BriefContent) -> ComposedEmail:
-    """Build the persona-tailored email (subject + body + attachment) for a brief."""
+    """Build the persona-tailored email (subject + body + attachment) for a brief.
+    The full brief attaches as a PDF; if PDF rendering ever fails, it falls back to
+    the self-contained HTML so the email still goes out."""
     persona = _persona_value(brief)
-    persona_label = PERSONA_LABELS.get(persona, "Account Executive")
+    persona_label = PERSONA_LABELS.get(persona, "Sales Representative")
     company = brief.company or brief.company_slug or "Prospect"
 
     subject = f"[SalesIntel] {persona_label} Brief — {company}"
-    attachment_filename = f"{_safe_filename(company)}-{persona}-brief.html"
-    attachment_html = brief_html_for(brief)
+    base = f"{_safe_filename(company)}-{persona}-brief"
+    try:
+        attachment_bytes = brief_pdf_for(brief)
+        attachment_filename, maintype, subtype = base + ".pdf", "application", "pdf"
+    except Exception:  # noqa: BLE001 — never fail the whole email over the attachment
+        attachment_bytes = brief_html_for(brief).encode("utf-8")
+        attachment_filename, maintype, subtype = base + ".html", "text", "html"
 
     return ComposedEmail(
         subject=subject,
         body_html=_digest_body_html(brief),
         plain_text=_plain_text(brief),
         attachment_filename=attachment_filename,
-        attachment_bytes=attachment_html.encode("utf-8"),
+        attachment_bytes=attachment_bytes,
+        attachment_maintype=maintype,
+        attachment_subtype=subtype,
     )
 
 
 def brief_html_for(brief: BriefContent) -> str:
-    """The self-contained full-brief HTML used as the attachment."""
+    """The self-contained full-brief HTML (fallback attachment)."""
     return render_html(brief)
 
 
+def _pdf_html(brief: BriefContent) -> str:
+    """A print-friendly, xhtml2pdf-compatible rendering of the full brief."""
+    persona = _persona_value(brief)
+    label = PERSONA_LABELS.get(persona, "Sales Representative")
+    company = html.escape(brief.company or brief.company_slug or "Prospect")
+
+    parts = [
+        f'<div style="font-size:10px;color:#c2410c;text-transform:uppercase;'
+        f'letter-spacing:1px;font-weight:bold;">{html.escape(label)} &middot; Pre-Sales Brief</div>',
+        f'<h1 style="font-size:20px;color:#0f172a;margin:2px 0 0;">{company}</h1>',
+    ]
+    if brief.headline:
+        parts.append(
+            f'<p style="font-size:12px;color:#475569;margin:6px 0 0;">{html.escape(brief.headline)}</p>'
+        )
+    if brief.key_facts:
+        facts = "&nbsp;&nbsp;&bull;&nbsp;&nbsp;".join(
+            f'<b>{html.escape(f.label)}:</b> {html.escape(f.value)}'
+            for f in brief.key_facts[:5]
+        )
+        parts.append(f'<p style="font-size:11px;color:#334155;margin:8px 0 0;">{facts}</p>')
+    for i, s in enumerate(brief.sections, start=1):
+        parts.append(
+            f'<h2 style="font-size:13px;color:#0f172a;margin:16px 0 3px;'
+            f'border-bottom:1px solid #e3e8ef;padding-bottom:2px;">{i}. {html.escape(s.title)}</h2>'
+            f'<div style="font-size:12px;color:#334155;">{_md_to_html(s.content_md)}</div>'
+        )
+    if brief.sources:
+        items = "".join(
+            f'<li><b>{html.escape(src.marker)}</b> {html.escape(src.title)}'
+            + (f" &mdash; {html.escape(src.filename)}" if src.filename else "")
+            + "</li>"
+            for src in brief.sources
+        )
+        parts.append(
+            f'<h2 style="font-size:12px;color:#0f172a;margin:16px 0 3px;">Sources</h2>'
+            f'<ul style="font-size:10.5px;color:#475569;">{items}</ul>'
+        )
+    return (
+        '<html><head><meta charset="utf-8"><style>'
+        "body{font-family:Helvetica,Arial,sans-serif;color:#1f2933;} p{line-height:1.5;}"
+        "</style></head><body>" + "".join(parts) + "</body></html>"
+    )
+
+
+def brief_pdf_for(brief: BriefContent) -> bytes:
+    """Render the full brief to PDF bytes (xhtml2pdf — pure-Python, no system deps)."""
+    import io
+
+    from xhtml2pdf import pisa
+
+    buf = io.BytesIO()
+    result = pisa.CreatePDF(src=_pdf_html(brief), dest=buf, encoding="utf-8")
+    if result.err:
+        raise RuntimeError("PDF generation failed")
+    return buf.getvalue()
+
+
 def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult:
-    """Send for real when SMTP is configured and mock_email is off; else demo-send."""
+    """Send via Gmail (if the user connected Google), else SMTP (if configured),
+    else demo-send. `mock_email` forces demo regardless (tests/E2E)."""
+    from app.services import google_service
+
     recipient = (recipient or "").strip()
     if not recipient:
         return EmailSendResult(
@@ -167,7 +236,44 @@ def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult
             message="No recipient address was provided.",
         )
 
-    should_send = settings.email_configured and not settings.mock_email
+    use_gmail = google_service.is_connected() and not settings.mock_email
+    use_smtp = settings.email_configured and not settings.mock_email
+
+    # Preferred path: send as the connected Gmail account.
+    if use_gmail:
+        try:
+            google_service.send_message(
+                to=recipient,
+                subject=composed.subject,
+                html=composed.body_html,
+                plain=composed.plain_text,
+                attachment_bytes=composed.attachment_bytes,
+                attachment_filename=composed.attachment_filename,
+                attachment_maintype=composed.attachment_maintype,
+                attachment_subtype=composed.attachment_subtype,
+            )
+        except Exception as exc:  # noqa: BLE001
+            if not use_smtp:  # no fallback available
+                return EmailSendResult(
+                    delivered=False, mode="error", recipient=recipient,
+                    subject=composed.subject,
+                    message=f"Gmail send failed: {exc}",
+                )
+        else:
+            delivered = not settings.mock_google
+            return EmailSendResult(
+                delivered=delivered,
+                mode="gmail",
+                recipient=recipient,
+                subject=composed.subject,
+                message=(
+                    f"Brief emailed to {recipient} from your Gmail."
+                    if delivered
+                    else f"Gmail send simulated (mock) for {recipient}."
+                ),
+            )
+
+    should_send = use_smtp
     if not should_send:
         return EmailSendResult(
             delivered=False,
@@ -189,8 +295,8 @@ def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult
         msg.add_alternative(composed.body_html, subtype="html")
         msg.add_attachment(
             composed.attachment_bytes,
-            maintype="text",
-            subtype="html",
+            maintype=composed.attachment_maintype,
+            subtype=composed.attachment_subtype,
             filename=composed.attachment_filename,
         )
         with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:

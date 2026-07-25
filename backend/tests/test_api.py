@@ -9,7 +9,7 @@ NEW_MEETING = {
     "why": "Scale retail + B2B",
     "agenda": "Omnichannel data + support",
     "start_time": "2026-07-20T10:30:00",
-    "persona": "ae",
+    "persona": "sales_rep",
 }
 
 
@@ -47,23 +47,23 @@ def test_companies(client):
 
 def test_create_meeting_primary_brief_ready(client):
     m = _create(client)
-    assert m["persona"] == "ae"
+    assert m["persona"] == "sales_rep"
     assert m["company_slug"] == "sleep_company"
     brief = _poll_brief(client, m["id"])
     assert brief["status"] == "ready"
-    assert brief["persona"] == "ae"
+    assert brief["persona"] == "sales_rep"
     assert len(brief["content"]["sections"]) == 9
     assert brief["content"]["key_facts"]
 
 
 def test_toggle_persona_lazy_generation(client):
     m = _create(client)
-    sdr = _poll_brief(client, m["id"], persona="sdr")
-    assert sdr["status"] == "ready"
-    assert sdr["persona"] == "sdr"
-    assert len(sdr["content"]["sections"]) == 5
-    se = _poll_brief(client, m["id"], persona="se")
-    assert len(se["content"]["sections"]) == 6
+    mgr = _poll_brief(client, m["id"], persona="sales_manager")
+    assert mgr["status"] == "ready"
+    assert mgr["persona"] == "sales_manager"
+    assert len(mgr["content"]["sections"]) == 6
+    vp = _poll_brief(client, m["id"], persona="vp_sales")
+    assert len(vp["content"]["sections"]) == 6
 
 
 def test_chat_grounded_and_ungrounded(client):
@@ -82,23 +82,23 @@ def test_chat_grounded_and_ungrounded(client):
 
 def test_regenerate(client):
     m = _create(client)
-    r = client.post(f"/meetings/{m['id']}/brief/regenerate", params={"persona": "ae"})
+    r = client.post(f"/meetings/{m['id']}/brief/regenerate", params={"persona": "sales_rep"})
     assert r.status_code == 202
-    brief = _poll_brief(client, m["id"], persona="ae")
+    brief = _poll_brief(client, m["id"], persona="sales_rep")
     assert brief["status"] == "ready"
 
 
 def test_email_preview_and_demo_send(client):
     m = _create(client)
-    _poll_brief(client, m["id"])  # ensure the AE brief is ready
+    _poll_brief(client, m["id"])  # ensure the primary brief is ready
 
     prev = client.get(f"/meetings/{m['id']}/brief/email/preview")
     assert prev.status_code == 200, prev.text
     pj = prev.json()
     assert "The Sleep Company" in pj["subject"]
-    assert "Account Executive" in pj["subject"]
+    assert "Sales Representative" in pj["subject"]
     assert pj["body_html"].strip()
-    assert pj["attachment_filename"].endswith("-ae-brief.html")
+    assert pj["attachment_filename"].endswith("-sales_rep-brief.pdf")
     assert pj["email_configured"] is False  # MOCK_EMAIL → demo mode
 
     send = client.post(
@@ -114,22 +114,59 @@ def test_email_preview_and_demo_send(client):
 
 def test_email_preview_persona_specific(client):
     m = _create(client)
-    _poll_brief(client, m["id"], persona="sdr")  # lazily generate the SDR brief
+    _poll_brief(client, m["id"], persona="sales_manager")  # lazily generate a non-primary brief
     prev = client.get(
-        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "sdr"}
+        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "sales_manager"}
     )
     assert prev.status_code == 200, prev.text
-    assert prev.json()["attachment_filename"].endswith("-sdr-brief.html")
+    assert prev.json()["attachment_filename"].endswith("-sales_manager-brief.pdf")
 
 
 def test_email_preview_409_when_not_ready(client):
     # A meeting whose non-primary persona brief has never been generated is
     # "pending" → preview must refuse rather than compose a half-baked email.
-    m = _create(client, persona="ae")
+    m = _create(client, persona="sales_rep")
     r = client.get(
-        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "se"}
+        f"/meetings/{m['id']}/brief/email/preview", params={"persona": "admin"}
     )
     assert r.status_code == 409
+
+
+def test_session_persona_sets_active_and_generates(client):
+    # Logging in records the active persona server-side and generates its briefs.
+    m = _create(client)
+    _poll_brief(client, m["id"])  # sales_rep ready
+    r = client.put("/session/persona", params={"persona": "vp_sales"})
+    assert r.status_code == 202
+    assert r.json()["active_persona"] == "vp_sales"
+    assert client.get("/session/persona").json()["active_persona"] == "vp_sales"
+    b = _poll_brief(client, m["id"], persona="vp_sales")
+    assert b["status"] == "ready"
+    # Reset so the shared-DB active persona doesn't leak into other tests.
+    client.put("/session/persona", params={"persona": "sales_rep"})
+
+
+def test_login_clears_scout_chat_history(client):
+    m = _create(client)
+    _poll_brief(client, m["id"])
+    client.post(f"/meetings/{m['id']}/chat", json={"question": "Who led their last round?"})
+    assert len(client.get(f"/meetings/{m['id']}/chat").json()) >= 2  # user + assistant
+    # Logging in (set session persona) clears Scout history for a fresh assistant.
+    client.put("/session/persona", params={"persona": "sales_rep"})
+    assert client.get(f"/meetings/{m['id']}/chat").json() == []
+
+
+def test_generate_briefs_for_persona(client):
+    # Logging in with a persona queues that persona's briefs across all meetings.
+    m = _create(client)
+    _poll_brief(client, m["id"])  # primary (sales_rep) ready
+    r = client.post("/briefs/generate", params={"persona": "vp_sales"})
+    assert r.status_code == 202
+    assert r.json()["persona"] == "vp_sales"
+    # BackgroundTasks run synchronously in TestClient → the vp_sales brief is now ready.
+    b = _poll_brief(client, m["id"], persona="vp_sales")
+    assert b["status"] == "ready"
+    assert len(b["content"]["sections"]) == 6
 
 
 def test_delete_meeting(client):

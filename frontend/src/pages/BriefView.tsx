@@ -16,6 +16,7 @@ import { ChatPanel } from "../components/ChatPanel";
 import { EmailDialog } from "../components/EmailDialog";
 import { CONFIDENCE_META, formatDateTime } from "../lib/format";
 import { PERSONAS, PERSONA_LABELS } from "../lib/persona";
+import { useAuth } from "../lib/auth";
 
 function KpiStrip({ facts }: { facts: KeyFact[] }) {
   const items = facts.slice(0, 4);
@@ -81,6 +82,7 @@ export function BriefView() {
   const [downloading, setDownloading] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
+  const { user } = useAuth();
 
   const { data: meeting } = useQuery({
     queryKey: ["meeting", meetingId],
@@ -88,14 +90,15 @@ export function BriefView() {
     enabled: Number.isFinite(meetingId),
   });
 
-  // Initialize the viewed persona to the meeting's primary persona once loaded.
+  // Default the viewed persona to the signed-in user's persona (their brief), falling
+  // back to the meeting's primary persona. The user can still toggle via the tabs.
   useEffect(() => {
-    if (meeting && activePersona === null) {
-      setActivePersona(meeting.persona);
+    if (activePersona === null && (user || meeting)) {
+      setActivePersona(user?.persona ?? meeting?.persona ?? "sales_rep");
     }
-  }, [meeting, activePersona]);
+  }, [user, meeting, activePersona]);
 
-  const viewPersona: Persona = activePersona ?? meeting?.persona ?? "ae";
+  const viewPersona: Persona = activePersona ?? user?.persona ?? "sales_rep";
 
   const { data: brief, isLoading } = useQuery({
     queryKey: ["brief", meetingId, viewPersona],
@@ -141,22 +144,19 @@ export function BriefView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="seg" role="tablist" aria-label="View as persona">
-            {PERSONAS.map((p) => {
-              const active = viewPersona === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setActivePersona(p)}
-                  className={`seg-btn ${active ? "on" : ""}`}
-                >
-                  {PERSONA_LABELS[p]}
-                </button>
-              );
-            })}
+          {/* Single-persona app: the signed-in user only ever sees their own persona. */}
+          <div className="seg" role="tablist" aria-label="Persona">
+            {(user ? [user.persona] : PERSONAS).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={viewPersona === p}
+                className="seg-btn on"
+              >
+                {PERSONA_LABELS[p]}
+              </button>
+            ))}
           </div>
           {ready && (
             <>
@@ -241,7 +241,7 @@ export function BriefView() {
               {/* Hero card */}
               <section className="card p-6 sm:p-7">
                 <span className="inline-block rounded-full bg-brand-50 px-3 py-1 text-[11.5px] font-bold text-brand-700">
-                  {PERSONA_LABELS[viewPersona]} · Pre-Call Brief
+                  {PERSONA_LABELS[viewPersona]} · Brief
                 </span>
                 <h1 className="mt-3 text-[26px] font-bold leading-tight tracking-tight text-ink-900 text-balance">
                   {brief.content.company}

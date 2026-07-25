@@ -3,7 +3,12 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, Loader2, X } from "lucide-react";
 import { createMeeting, listCompanies } from "../api/client";
 import type { CompanyRead, MeetingCreate, Persona } from "../api/types";
-import { PERSONAS, PERSONA_ACCENTS, PERSONA_LABELS, PERSONA_TAGLINES } from "../lib/persona";
+import { PERSONA_ACCENTS, PERSONA_LABELS, PERSONA_TAGLINES } from "../lib/persona";
+import { useAuth } from "../lib/auth";
+
+// Any company works (we pull live web intel by name); these are the research
+// guide's 5 targets, offered as autocomplete suggestions.
+const WEB_SUGGESTIONS = ["Freshworks", "Braze", "Sprout Social", "Amplitude", "Zuora"];
 
 interface Props {
   open: boolean;
@@ -34,7 +39,9 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
   const [why, setWhy] = useState("");
   const [agenda, setAgenda] = useState("");
   const [start, setStart] = useState(toLocalInput(initialStart));
-  const [persona, setPersona] = useState<Persona>("ae");
+  const { user } = useAuth();
+  const defaultPersona: Persona = user?.persona ?? "sales_rep";
+  const [persona, setPersona] = useState<Persona>(defaultPersona);
 
   useEffect(() => {
     if (open) {
@@ -43,9 +50,9 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
       setWhy("");
       setAgenda("");
       setStart(toLocalInput(initialStart));
-      setPersona("ae");
+      setPersona(defaultPersona);
     }
-  }, [open, initialStart]);
+  }, [open, initialStart, defaultPersona]);
 
   const mutation = useMutation({
     mutationFn: (payload: MeetingCreate) => createMeeting(payload),
@@ -125,21 +132,23 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
               <label className="label" htmlFor="m-company">
                 Prospect company
               </label>
-              <select
+              <input
                 id="m-company"
                 className="input"
+                list="m-company-suggestions"
+                placeholder="Type any company (e.g. Freshworks)"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
-              >
-                <option value="" disabled>
-                  Select a company…
-                </option>
+                autoComplete="off"
+              />
+              <datalist id="m-company-suggestions">
                 {companies.map((c: CompanyRead) => (
-                  <option key={c.slug} value={c.name}>
-                    {c.name} ({c.doc_count} docs)
-                  </option>
+                  <option key={c.slug} value={c.name} />
                 ))}
-              </select>
+                {WEB_SUGGESTIONS.map((n) => (
+                  <option key={n} value={n} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="label" htmlFor="m-start">
@@ -183,35 +192,15 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
 
           <div>
             <label className="label">Brief persona</label>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {PERSONAS.map((p) => {
-                const active = persona === p;
-                const accent = PERSONA_ACCENTS[p];
-                return (
-                  <button
-                    type="button"
-                    key={p}
-                    onClick={() => setPersona(p)}
-                    aria-pressed={active}
-                    className={`flex flex-col rounded-[10px] border p-3 text-left transition-colors ${
-                      active
-                        ? `${accent.badge} ring-2 ring-current ring-offset-1`
-                        : "border-line bg-white hover:bg-ink-50"
-                    }`}
-                  >
-                    <span
-                      className={`text-[13px] font-semibold ${
-                        active ? "text-ink-900" : "text-ink-800"
-                      }`}
-                    >
-                      {PERSONA_LABELS[p]}
-                    </span>
-                    <span className="mt-1 text-[11px] leading-tight text-muted">
-                      {PERSONA_TAGLINES[p]}
-                    </span>
-                  </button>
-                );
-              })}
+            {/* Single-persona app: the brief is always prepared for the signed-in role. */}
+            <div className="flex items-center gap-2.5 rounded-[10px] border border-line bg-ink-50 p-3">
+              <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${PERSONA_ACCENTS[persona].dot}`} />
+              <div className="leading-tight">
+                <div className="text-[13px] font-semibold text-ink-900">
+                  {PERSONA_LABELS[persona]}
+                </div>
+                <div className="text-[11px] text-muted">{PERSONA_TAGLINES[persona]} · your role</div>
+              </div>
             </div>
           </div>
 

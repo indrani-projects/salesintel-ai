@@ -34,9 +34,14 @@ class Confidence(str, Enum):
 
 
 class Persona(str, Enum):
-    ae = "ae"    # Account Executive — full pre-call brief
-    sdr = "sdr"  # Sales Development Rep — prospecting brief
-    se = "se"    # Solutions Engineer — technical fit brief
+    # The six personas from docs/shared/Expected_Features_By_Persona. Each reframes
+    # the prospect brief to that reader's goals.
+    sales_rep = "sales_rep"          # Sales Representative — full pre-meeting brief
+    sales_manager = "sales_manager"  # Sales Manager — coaching lens
+    enablement = "enablement"        # Sales Enablement — best-practice / onboarding lens
+    revops = "revops"                # Revenue Operations Manager — ROI / adoption lens
+    vp_sales = "vp_sales"            # VP of Sales — executive lens
+    admin = "admin"                  # SalesIntel AI Admin — data provenance / quality lens
 
 
 # The nine fixed sections of every brief, in display order.
@@ -68,41 +73,76 @@ SECTION_TITLES = {
 # Persona metadata + per-persona section sets
 # --------------------------------------------------------------------------- #
 PERSONA_LABELS = {
-    "ae": "Account Executive",
-    "sdr": "Sales Development Rep",
-    "se": "Solutions Engineer",
+    "sales_rep": "Sales Representative",
+    "sales_manager": "Sales Manager",
+    "enablement": "Sales Enablement",
+    "revops": "Revenue Operations Manager",
+    "vp_sales": "VP of Sales",
+    "admin": "SalesIntel AI Admin",
 }
 
 PERSONA_TAGLINES = {
-    "ae": "Full pre-call brief — discovery to close",
-    "sdr": "Prospecting brief — earn the meeting",
-    "se": "Technical fit brief — prep the deep-dive",
+    "sales_rep": "Prepare fast for every customer meeting",
+    "sales_manager": "Coach the team, improve win rates",
+    "enablement": "Standardize prep, accelerate onboarding",
+    "revops": "Drive adoption and prove ROI",
+    "vp_sales": "Measure business impact and revenue growth",
+    "admin": "Secure, reliable platform operations",
 }
 
-# Ordered (id, title) sections for each persona's brief.
+# Ordered (id, title) sections for each persona's brief. Sales Representative reuses
+# the full nine-section brief (SECTION_ORDER); the rest reframe it to their lens.
 PERSONA_SECTIONS = {
-    "ae": [(sid, SECTION_TITLES[sid]) for sid in SECTION_ORDER],
-    "sdr": [
-        ("hook", "The Hook"),
-        ("target_contact", "Who to Contact"),
-        ("value_hypothesis", "Value Hypothesis"),
-        ("outreach_opener", "Ready-to-Send Opener"),
-        ("qualifying_questions", "Qualifying Questions"),
+    "sales_rep": [(sid, SECTION_TITLES[sid]) for sid in SECTION_ORDER],
+    "sales_manager": [
+        ("deal_snapshot", "Deal Snapshot"),
+        ("coaching_focus", "Coaching Focus"),
+        ("deal_risks", "Deal Risks & Watch-outs"),
+        ("key_stakeholders", "Key Stakeholders"),
+        ("rep_questions", "Questions to Ask Your Rep"),
+        ("next_steps", "Recommended Next Steps"),
     ],
-    "se": [
-        ("tech_stack", "Current Tech Stack"),
-        ("integration_landscape", "Integration Landscape"),
-        ("technical_fit", "Technical Fit Hypotheses"),
-        ("demo_focus", "Demo Focus — What to Show"),
-        ("technical_objections", "Likely Technical Objections"),
-        ("open_questions", "Open Technical Questions"),
+    "enablement": [
+        ("company_snapshot", "Company Snapshot"),
+        ("best_practice_prep", "Best-Practice Prep Steps"),
+        ("talking_points", "Key Talking Points"),
+        ("objection_handling", "Objection Handling"),
+        ("playbook_alignment", "Playbook & Messaging Alignment"),
+        ("readiness_checklist", "Pre-Meeting Readiness Checklist"),
+    ],
+    "revops": [
+        ("account_snapshot", "Account Snapshot"),
+        ("data_health", "CRM Data Health & Gaps"),
+        ("process_fit", "Process & Workflow Fit"),
+        ("automation_opportunities", "Automation Opportunities"),
+        ("roi_hypothesis", "ROI Hypothesis"),
+        ("adoption_angle", "Adoption & Rollout Angle"),
+    ],
+    "vp_sales": [
+        ("executive_summary", "Executive Summary"),
+        ("strategic_fit", "Strategic Fit"),
+        ("revenue_opportunity", "Revenue Opportunity"),
+        ("win_risk", "Win Probability & Risks"),
+        ("competitive_landscape", "Competitive Landscape"),
+        ("exec_recommendation", "Executive Recommendation"),
+    ],
+    "admin": [
+        ("source_inventory", "Source Inventory & Credibility"),
+        ("data_lineage", "Data Lineage — Fact → Source"),
+        ("coverage_gaps", "Coverage Gaps & Missing Data"),
+        ("data_freshness", "Data Freshness"),
+        ("integration_status", "Integration & Field-Mapping Status"),
+        ("quality_flags", "Quality Flags & Watch-outs"),
     ],
 }
+
+# The default persona (also the frontend's initial selection).
+DEFAULT_PERSONA = "sales_rep"
 
 
 def sections_for(persona: str):
-    """Ordered [(id, title), ...] for a persona (defaults to AE)."""
-    return PERSONA_SECTIONS.get(persona, PERSONA_SECTIONS["ae"])
+    """Ordered [(id, title), ...] for a persona (defaults to Sales Representative)."""
+    return PERSONA_SECTIONS.get(persona, PERSONA_SECTIONS[DEFAULT_PERSONA])
 
 
 # --------------------------------------------------------------------------- #
@@ -123,7 +163,7 @@ class MeetingCreate(BaseModel):
     why: str = Field("", description="Why this meeting / what we want from it")
     agenda: str = Field("", description="Agenda; steers which angle the brief emphasizes")
     start_time: datetime
-    persona: Persona = Field(Persona.ae, description="Primary rep persona for this meeting")
+    persona: Persona = Field(Persona.sales_rep, description="Primary rep persona for this meeting")
 
 
 class MeetingRead(BaseModel):
@@ -136,7 +176,9 @@ class MeetingRead(BaseModel):
     start_time: datetime
     created_at: datetime
     brief_status: BriefStatus
-    persona: Persona = Persona.ae  # the meeting's primary persona
+    persona: Persona = Persona.sales_rep  # the meeting's primary persona
+    google_event_id: Optional[str] = None   # set when linked to a Google Calendar event
+    google_html_link: Optional[str] = None   # deep-link to the event on Google
 
 
 # --------------------------------------------------------------------------- #
@@ -170,7 +212,7 @@ class BriefContent(BaseModel):
     returns the section set defined by PERSONA_SECTIONS[persona], in order."""
     company: str
     company_slug: str
-    persona: Persona = Persona.ae
+    persona: Persona = Persona.sales_rep
     headline: str = ""               # one-line TL;DR shown at top
     key_facts: List[KeyFact] = Field(default_factory=list)  # 3-5 at-a-glance metrics
     sections: List[BriefSection]
@@ -181,7 +223,7 @@ class BriefContent(BaseModel):
 class BriefRead(BaseModel):
     """What GET /meetings/{id}/brief returns (for a given persona)."""
     meeting_id: int
-    persona: Persona = Persona.ae
+    persona: Persona = Persona.sales_rep
     status: BriefStatus
     content: Optional[BriefContent] = None   # present when status == ready
     html: Optional[str] = None               # rendered HTML (brief_render), when ready
@@ -231,6 +273,34 @@ class EmailSendResult(BaseModel):
     recipient: str
     subject: str
     message: str                     # human-readable status for the UI
+
+
+class EmailAutomationStatus(BaseModel):
+    """Read-only view of the auto-email settings, for the Settings page."""
+    enabled: bool = False            # AUTO_EMAIL_ENABLED — sends on-ready + reminder
+    lead_minutes: int = 60           # reminder fires this long before start_time
+    recipient: str = ""              # default_recipient (blank ⇒ auto-send skipped)
+    transport: str = "demo"          # "gmail" | "smtp" | "demo" — how a send delivers
+    personalized: bool = False        # True ⇒ some personas have their own recipient email
+
+
+# --------------------------------------------------------------------------- #
+# Google integration (one OAuth: Gmail send + Calendar)
+# --------------------------------------------------------------------------- #
+class GoogleStatus(BaseModel):
+    configured: bool = False          # OAuth client set in .env (Connect is possible)
+    connected: bool = False           # a Google account is linked (token stored)
+    email: Optional[str] = None       # the connected Google account
+    scopes: List[str] = Field(default_factory=list)
+
+
+class CalendarSyncResult(BaseModel):
+    imported: int = 0                 # new meetings created from Google events
+    briefed: int = 0                  # of those, matched a prospect → brief queued
+    skipped_existing: int = 0         # events already imported (deduped)
+    scanned: int = 0                  # total Google events looked at
+    deleted: int = 0                  # meetings removed because their Google event was deleted
+    message: str = ""
 
 
 # --------------------------------------------------------------------------- #

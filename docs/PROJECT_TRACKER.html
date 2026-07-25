@@ -100,7 +100,7 @@
 // ── Single source of truth. Update `status` fields as work lands. ──────────
 // status: "todo" | "doing" | "done" | "blocked"
 const DATA = {
-  lastUpdated: "2026-07-11 · Direction C shipped across the app + test suite (23 pytest + 3 Playwright E2E, all green) · verification gate now mandatory",
+  lastUpdated: "2026-07-25 · + calendar auto-sync (30s) with deletion reconciliation, 1-hour-before persona email (corrected from day-before) with per-persona routing, single-active-persona login (fresh Scout on login), and PDF brief email — pytest + npm build + Playwright 7/7 green",
   phases: [
     { name:"Setup — Runtimes & Environments", owner:"Lead", epics:[
       { id:"ENV", name:"Prerequisites", stories:[
@@ -251,6 +251,136 @@ const DATA = {
       { id:"E27", name:"Verify", stories:[
         { id:"S27.1", desc:"MOCK_EMAIL mode; pytest 30/30 (email service + API)", owner:"Lead", status:"done" },
         { id:"S27.2", desc:"Playwright 4/4 incl. email compose→demo-send + screenshots", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 7 — Engineering Workflow & Tooling", owner:"Lead", epics:[
+      { id:"E28", name:"One-command stack", stories:[
+        { id:"S28.1", desc:"stack.ps1 / stack.sh — start/stop/status/restart, detached, tree-kill (no orphans)", owner:"Lead", status:"done" },
+        { id:"S28.2", desc:"stack.ps1 share — share mode + ngrok/Cloudflare tunnel (consolidated share-demo.ps1)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E29", name:"Git workflow standard", stories:[
+        { id:"S29.1", desc:".githooks: pre-push blocks main, commit-msg auto co-author; git-workflow skill", owner:"Lead", status:"done" },
+        { id:"S29.2", desc:"bootstrap.ps1/.sh + core.hooksPath; branch → rebase → PR, never direct to main", owner:"Lead", status:"done" },
+      ]},
+      { id:"E30", name:"Dev workflow + hygiene", stories:[
+        { id:"S30.1", desc:"dev-workflow skill: plan → delegate → tests → gate → ship", owner:"Lead", status:"done" },
+        { id:"S30.2", desc:"Author indrani-projects + Co-Authored-By Claude; secret guards (.env, client_secret_*)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 8 — Google Workspace Integration (one OAuth)", owner:"Lead", epics:[
+      { id:"E31", name:"OAuth foundation", stories:[
+        { id:"S31.1", desc:"One consent (gmail.send + calendar.events); GoogleToken store; /auth/google/*; mock_google", owner:"Lead", status:"done" },
+        { id:"S31.2", desc:"PKCE disabled for stateless web callback (fixed 'Missing code verifier')", owner:"Lead", status:"done" },
+      ]},
+      { id:"E32", name:"Gmail send + Calendar sync", stories:[
+        { id:"S32.1", desc:"Send brief email from connected Gmail (prefers Gmail → SMTP → demo)", owner:"Lead", status:"done" },
+        { id:"S32.2", desc:"Calendar: import prospect events → briefs (dedup); push app meetings → events", owner:"Lead", status:"done" },
+        { id:"S32.3", desc:"Meeting.google_event_id + idempotent SQLite column migration", owner:"Lead", status:"done" },
+      ]},
+      { id:"E33", name:"Settings UI + verify", stories:[
+        { id:"S33.1", desc:"Settings page (connect/sync/disconnect) + Calendar 'Sync Google' button", owner:"Frontend", status:"done" },
+        { id:"S33.2", desc:"MOCK_GOOGLE; pytest 35/35 + Playwright 5/5; live OAuth verified end-to-end", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 9 — Web-First Prospect Intel (generic, on-demand)", owner:"Lead", epics:[
+      { id:"E34", name:"Web sources + cache", stories:[
+        { id:"S34.1", desc:"web_sources: keyless Google News RSS + SEC EDGAR + Reddit; keyword filter; fail-soft", owner:"Lead", status:"done" },
+        { id:"S34.2", desc:"Filtered-intel 24h TTL cache — no LLM, 0 extra Gemini calls", owner:"Lead", status:"done" },
+      ]},
+      { id:"E35", name:"Web-first seam", stories:[
+        { id:"S35.1", desc:"load_company_intel: web-first, docs fallback, zoho always; company NAME threaded", owner:"Lead", status:"done" },
+        { id:"S35.2", desc:"Generic for ANY company; free-text company dialog; 5-target hints", owner:"Lead", status:"done" },
+      ]},
+      { id:"E36", name:"Verify", stories:[
+        { id:"S36.1", desc:"MOCK_WEB; pytest 40/40 + Playwright 5/5 (Freshworks web-only meeting)", owner:"Lead", status:"done" },
+        { id:"S36.2", desc:"Live fetch confirmed real news + SEC filings for Freshworks", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 10 — Web-to-Doc Prospect Prep (Plane A · no LLM) · SI-12", owner:"Lead", epics:[
+      { id:"E37", name:"Keyword taxonomy + credibility", stories:[
+        { id:"S37.1", desc:"research_keywords.py — research-guide Section 3 taxonomy (match_categories, search_queries; word-bounded acronyms)", owner:"Lead", status:"done" },
+        { id:"S37.2", desc:"credibility.py — rule-based domain scoring (regulatory/official/press/social); official = whole-name match, no LLM", owner:"Lead", status:"done" },
+      ]},
+      { id:"E38", name:"Keyless retrieval + extraction", stories:[
+        { id:"S38.1", desc:"retrieval.py — DuckDuckGo HTML + Wikipedia search; trafilatura main-text extraction (extract_page pure)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E39", name:"Prep orchestrator + cache + seam", stories:[
+        { id:"S39.1", desc:"prep.py — fetch → keep guide-matched passages → credibility → cached .md + manifest.json (TTL, idempotent)", owner:"Lead", status:"done" },
+        { id:"S39.2", desc:"sources.load_prepared_docs; load_company_intel prefers prepared → feeds → local; tools/prepare.py CLI (--all)", owner:"Lead", status:"done" },
+        { id:"S39.3", desc:"trafilatura==2.1.0 dep; PREP_ENABLED/PREP_MAX_RESULTS/PREP_TTL_HOURS config", owner:"Lead", status:"done" },
+      ]},
+      { id:"E40", name:"Verify + hardening", stories:[
+        { id:"S40.1", desc:"test_prep.py offline (no network, no LLM; a test asserts prep never imports the LLM client)", owner:"Lead", status:"done" },
+        { id:"S40.2", desc:"Fixes: official-domain precision (sleepnumber≠official), word-bounded acronyms, prepared-cache test isolation", owner:"Lead", status:"done" },
+        { id:"S40.3", desc:"Live: 6 target companies prepared (Freshworks 11 docs, incl. official/Wikipedia/SEC/press)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 11 — Zoho Product Catalog (Plane B · no LLM) · SI-13", owner:"Lead", epics:[
+      { id:"E41", name:"Catalog seed + condenser", stories:[
+        { id:"S41.1", desc:"zoho_catalog.py — 15-source editable seed (help.zoho.com KB is JS → static www.zoho.com pages)", owner:"Lead", status:"done" },
+        { id:"S41.2", desc:"condense.py — deterministic extractive lead_paragraph + key_points (never abstractive, no LLM)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E42", name:"Builder + generated docs", stories:[
+        { id:"S42.1", desc:"build_zoho_catalog.py CLI → docs/zoho/products/*.md + compact zoho_products_summary.md", owner:"Lead", status:"done" },
+        { id:"S42.2", desc:"Summary auto-loads into briefs; products/ subfolder excluded from auto-inject (keeps context short)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E43", name:"Verify", stories:[
+        { id:"S43.1", desc:"test_zoho_catalog.py 4 offline tests; live build 15/15; pytest + build + Playwright green", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 12 — Persona Refresh: 6 personas from the persona doc · SI-14", owner:"Lead", epics:[
+      { id:"E44", name:"Contract + generation", stories:[
+        { id:"S44.1", desc:"schemas: Persona enum (sales_rep/sales_manager/enablement/revops/vp_sales/admin) + labels/taglines/sections + DEFAULT_PERSONA", owner:"Lead", status:"done" },
+        { id:"S44.2", desc:"brief_engine: per-persona framing + section guidance for every new section; ALL_PERSONAS derives from enum", owner:"Lead", status:"done" },
+      ]},
+      { id:"E45", name:"Frontend selector & tabs", stories:[
+        { id:"S45.1", desc:"types + lib/persona.ts (one colour per persona); create-dialog selector as 3×2 grid", owner:"Frontend", status:"done" },
+        { id:"S45.2", desc:"Brief-view persona tabs + badges render all 6 (Admin = data-provenance view)", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E46", name:"Migration & verify", stories:[
+        { id:"S46.1", desc:"db.py one-time guarded migration: ae/sdr→sales_rep, se→enablement; drop stale briefs → regenerate; meetings preserved", owner:"Lead", status:"done" },
+        { id:"S46.2", desc:"pytest + build + Playwright 6/6 (toggle sales_rep→sales_manager→vp_sales); migration ran live (4 meetings remapped)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 13 — Recurring Calendar Auto-Sync · SI-15", owner:"Lead", epics:[
+      { id:"E47", name:"Auto-sync scheduler", stories:[
+        { id:"S47.1", desc:"calendar_sync_loop daemon every 30s (CALENDAR_SYNC_ENABLED/SECONDS); off in tests/E2E", owner:"Lead", status:"done" },
+        { id:"S47.2", desc:"sync_calendar_once — fail-soft: an expired token returns None, the loop never dies", owner:"Lead", status:"done" },
+      ]},
+      { id:"E48", name:"Resilience, live UI + deletions", stories:[
+        { id:"S48.1", desc:"Manual sync returns a clear 400 'reconnect Google' (was a raw 500) on invalid_grant", owner:"Lead", status:"done" },
+        { id:"S48.2", desc:"Calendar/Dashboard 15s idle poll → auto-synced meetings appear without a manual refresh", owner:"Frontend", status:"done" },
+        { id:"S48.3", desc:"Deletion reconciliation: a meeting whose Google event was deleted (in-window) is removed; delete_meeting_cascade; bounded + authoritative-only", owner:"Lead", status:"done" },
+        { id:"S48.4", desc:"pytest (incl. deletion test) · Playwright 7/7 · live: scheduler imported 2 meetings after reconnect, removed deleted ones", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 14 — 1-Hour-Before Persona Email · SI-16", owner:"Lead", epics:[
+      { id:"E49", name:"Pre-meeting email (1 hour before)", stories:[
+        { id:"S49.1", desc:"Persona brief emailed when start_time is within REMINDER_LEAD_MINUTES (60); reminder_sent_at guard; rides the reminder loop", owner:"Lead", status:"done" },
+        { id:"S49.2", desc:"_send_due refactor; on-ready send doubles as the pre-meeting send when already in-window (no near-dup)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E50", name:"Per-persona routing + surfacing", stories:[
+        { id:"S50.1", desc:"PERSONA_EMAILS + recipient_for_persona; both triggers email the meeting persona's address, else default", owner:"Lead", status:"done" },
+        { id:"S50.2", desc:"EmailAutomationStatus personalized; Settings card shows 'Before the meeting: within 60 min' + persona routing", owner:"Frontend", status:"done" },
+        { id:"S50.3", desc:"Corrected from a day-before to a 1-hour window (day_before tier/config/guard removed); pytest · build · Playwright 7/7", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 15 — Demo Login & Single Active Persona · SI-17", owner:"Lead", epics:[
+      { id:"E51", name:"Auth gate + login page", stories:[
+        { id:"S51.1", desc:"Client-side auth context (localStorage) + RequireAuth guard (lib/auth, App.tsx, main.tsx)", owner:"Frontend", status:"done" },
+        { id:"S51.2", desc:"Split-screen login UI (name / password / persona picker); sidebar user + Sign out button", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E52", name:"Single active persona + fresh Scout", stories:[
+        { id:"S52.1", desc:"AppState.active_persona; PUT/GET /session/persona (sets + generates); calendar sync uses get_active_persona (no default Sales Rep)", owner:"Lead", status:"done" },
+        { id:"S52.2", desc:"BriefView shows ONLY the user's persona tab; MeetingDialog persona picker → read-only 'your role' chip", owner:"Frontend", status:"done" },
+        { id:"S52.3", desc:"Clear Scout chat on login (PUT /session/persona deletes ChatMessages; frontend drops ['chat'] cache)", owner:"Lead", status:"done" },
+        { id:"S52.4", desc:"pytest (session persona sets+generates+clears chat) · build · Playwright 7/7 (single tab; login + sign-out)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 16 — Email PDF attachment + non-tech explainer · SI-6", owner:"Lead", epics:[
+      { id:"E53", name:"PDF brief attachment", stories:[
+        { id:"S53.1", desc:"Brief email attaches a PDF (xhtml2pdf, pure-Python) instead of .html; fail-soft to HTML; Gmail + SMTP use application/pdf", owner:"Lead", status:"done" },
+        { id:"S53.2", desc:"docs/HOW_IT_WORKS.html — plain-English explainer (tech stack, two planes, data journey, brief); pytest · build · Playwright 7/7", owner:"Lead", status:"done" },
       ]},
     ]},
   ]

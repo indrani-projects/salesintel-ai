@@ -4,20 +4,39 @@ export type BriefStatus = "pending" | "generating" | "ready" | "error";
 
 export type Confidence = "high" | "medium" | "low";
 
-export type Persona = "ae" | "sdr" | "se";
+export type Persona =
+  | "sales_rep"
+  | "sales_manager"
+  | "enablement"
+  | "revops"
+  | "vp_sales"
+  | "admin";
 
-export const PERSONA_ORDER: Persona[] = ["ae", "sdr", "se"];
+export const PERSONA_ORDER: Persona[] = [
+  "sales_rep",
+  "sales_manager",
+  "enablement",
+  "revops",
+  "vp_sales",
+  "admin",
+];
 
 export const PERSONA_LABELS: Record<Persona, string> = {
-  ae: "Account Executive",
-  sdr: "Sales Development Rep",
-  se: "Solutions Engineer",
+  sales_rep: "Sales Representative",
+  sales_manager: "Sales Manager",
+  enablement: "Sales Enablement",
+  revops: "Revenue Operations Manager",
+  vp_sales: "VP of Sales",
+  admin: "SalesIntel AI Admin",
 };
 
 export const PERSONA_TAGLINES: Record<Persona, string> = {
-  ae: "Full pre-call brief — discovery to close",
-  sdr: "Prospecting brief — earn the meeting",
-  se: "Technical fit brief — prep the deep-dive",
+  sales_rep: "Prepare fast for every customer meeting",
+  sales_manager: "Coach the team, improve win rates",
+  enablement: "Standardize prep, accelerate onboarding",
+  revops: "Drive adoption and prove ROI",
+  vp_sales: "Measure business impact and revenue growth",
+  admin: "Secure, reliable platform operations",
 };
 
 // The nine fixed sections of every brief, in display order.
@@ -71,6 +90,8 @@ export interface MeetingRead {
   created_at: string;
   brief_status: BriefStatus;
   persona: Persona;
+  google_event_id?: string | null;
+  google_html_link?: string | null;
 }
 
 export interface BriefSource {
@@ -147,8 +168,32 @@ export interface EmailPreview {
 
 export interface EmailSendResult {
   delivered: boolean;
-  mode: "sent" | "demo" | "error";
+  mode: "sent" | "demo" | "error" | "gmail";
   recipient: string;
   subject: string;
   message: string;
+}
+
+export interface GoogleStatus {
+  configured: boolean;
+  connected: boolean;
+  email?: string | null;
+  scopes: string[];
+}
+
+export interface CalendarSyncResult {
+  imported: number;
+  briefed: number;
+  skipped_existing: number;
+  scanned: number;
+  deleted: number;
+  message: string;
+}
+
+export interface EmailAutomationStatus {
+  enabled: boolean;
+  lead_minutes: number;
+  recipient: string;
+  transport: "gmail" | "smtp" | "demo";
+  personalized: boolean;
 }

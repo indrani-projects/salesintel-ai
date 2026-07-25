@@ -6,6 +6,7 @@ plus the shared Zoho product knowledge) into `SourceDoc` records.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import List, Optional
 
@@ -100,6 +101,11 @@ def _normalize(name_or_slug: str) -> str:
     return s.replace(" ", "_")
 
 
+def slugify(name_or_slug: str) -> str:
+    """Public cache slug for a company name (also used to key prepared web docs)."""
+    return _normalize(name_or_slug)
+
+
 def resolve_company_slug(name_or_slug: str) -> Optional[str]:
     """Map a free-text company name (or slug) to an existing docs/<slug> folder."""
     if not name_or_slug:
@@ -167,4 +173,90 @@ def load_company_sources(slug: str) -> List[SourceDoc]:
     zoho_docs, idx = _load_folder_docs(root / _ZOHO_SLUG, "zoho", idx)
     sources.extend(zoho_docs)
 
+    return sources
+
+
+def load_prepared_docs(
+    company_name: str,
+    slug: Optional[str],
+    start_index: int,
+) -> tuple[list[SourceDoc], int]:
+    """Load deterministically-prepared web docs (backend/.cache/prepared/<slug>/) when a
+    manifest exists. These are the keyword-filtered, credibility-scored Markdown docs the
+    prep stage writes with NO LLM. Empty ⇒ caller falls back to live feeds / local docs."""
+    from app.services import prep  # lazy import avoids a load-order cycle
+
+    prep_slug = prep.company_slug(company_name, slug)
+    cdir = prep.company_dir(prep_slug)
+    manifest_path = cdir / "manifest.json"
+    docs: list[SourceDoc] = []
+    idx = start_index
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001 — no/broken manifest => nothing prepared
+        return docs, idx
+
+    for entry in manifest.get("docs", []):
+        fname = entry.get("file")
+        if not fname:
+            continue
+        try:
+            text = (cdir / fname).read_text(encoding="utf-8")
+        except OSError:
+            continue
+        if len(text) > _MAX_DOC_CHARS:
+            text = text[:_MAX_DOC_CHARS]
+        docs.append(
+            SourceDoc(
+                marker=f"S{idx}",
+                title=f"{entry.get('title') or entry.get('domain') or 'Web'} — {company_name}",
+                filename=fname,
+                url=entry.get("url") or None,
+                text=text,
+                tags=["web", "prospect", "prepared"],
+            )
+        )
+        idx += 1
+    return docs, idx
+
+
+def load_company_intel(company_name: str, slug: Optional[str] = None) -> List[SourceDoc]:
+    """Prospect intel for `company_name`, preferring the prepared (keyword-filtered,
+    credibility-scored, NO-LLM) web docs when they exist; else live keyless feeds; else
+    the local docs/<slug>/ folder. Shared Zoho docs are always appended. Both the brief
+    engine and Scout use this so they share one prepared intel set. Web sources are
+    tagged ["web", …] so provenance shows in citations.
+    """
+    from app.services import web_sources  # local import keeps module load order simple
+
+    root = settings.docs_root_path
+    sources: list[SourceDoc] = []
+    idx = 1
+
+    prepared_docs, idx = load_prepared_docs(company_name, slug, idx)
+    if prepared_docs:
+        sources.extend(prepared_docs)
+    else:
+        web_docs = (
+            web_sources.fetch_intel(company_name) if settings.web_intel_enabled else []
+        )
+        if web_docs:
+            for wd in web_docs:
+                sources.append(
+                    SourceDoc(
+                        marker=f"S{idx}",
+                        title=f"{wd.source} — {company_name}",
+                        filename=None,
+                        url=(wd.url or None),
+                        text=wd.text,
+                        tags=["web", "prospect"],
+                    )
+                )
+                idx += 1
+        elif slug:  # no web intel — fall back to local prospect docs
+            prospect_docs, idx = _load_folder_docs(root / slug, "prospect", idx)
+            sources.extend(prospect_docs)
+
+    zoho_docs, idx = _load_folder_docs(root / _ZOHO_SLUG, "zoho", idx)
+    sources.extend(zoho_docs)
     return sources
