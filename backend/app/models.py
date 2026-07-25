@@ -51,6 +51,14 @@ class Brief(SQLModel, table=True):
     generated_at: Optional[datetime] = None
 
 
+class AppState(SQLModel, table=True):
+    # Single-row app state (POC): the currently signed-in user's persona. Set on login
+    # and used server-side (e.g. calendar sync) so imported meetings + generation use
+    # the active persona rather than a hardcoded default.
+    id: Optional[int] = Field(default=1, primary_key=True)
+    active_persona: str = "sales_rep"
+
+
 class ChatMessage(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     meeting_id: int = Field(foreign_key="meeting.id", index=True)

@@ -132,6 +132,20 @@ def test_email_preview_409_when_not_ready(client):
     assert r.status_code == 409
 
 
+def test_session_persona_sets_active_and_generates(client):
+    # Logging in records the active persona server-side and generates its briefs.
+    m = _create(client)
+    _poll_brief(client, m["id"])  # sales_rep ready
+    r = client.put("/session/persona", params={"persona": "vp_sales"})
+    assert r.status_code == 202
+    assert r.json()["active_persona"] == "vp_sales"
+    assert client.get("/session/persona").json()["active_persona"] == "vp_sales"
+    b = _poll_brief(client, m["id"], persona="vp_sales")
+    assert b["status"] == "ready"
+    # Reset so the shared-DB active persona doesn't leak into other tests.
+    client.put("/session/persona", params={"persona": "sales_rep"})
+
+
 def test_generate_briefs_for_persona(client):
     # Logging in with a persona queues that persona's briefs across all meetings.
     m = _create(client)

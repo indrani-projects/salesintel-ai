@@ -9,7 +9,7 @@ import {
 } from "../api/types";
 import type { Persona } from "../api/types";
 import { PERSONA_ACCENTS } from "../lib/persona";
-import { generateBriefsForPersona } from "../api/client";
+import { setSessionPersona } from "../api/client";
 import { useAuth } from "../lib/auth";
 
 export function LoginPage() {
@@ -27,9 +27,9 @@ export function LoginPage() {
     setSubmitting(true);
     const who = name.trim() || "Guest";
     login({ name: who, persona });
-    // Fire-and-forget: kick off generation of the selected persona's briefs so they're
-    // ready by the time the user browses. Never blocks entering the app.
-    generateBriefsForPersona(persona).catch(() => {
+    // Fire-and-forget: record the active persona server-side and kick off generation of
+    // its briefs so they're ready as the user browses. Never blocks entering the app.
+    setSessionPersona(persona).catch(() => {
       /* best-effort */
     });
     navigate("/calendar", { replace: true });

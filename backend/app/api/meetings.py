@@ -17,7 +17,7 @@ from sqlmodel import Session, select
 from app import models
 from app.config import settings
 from app.db import engine, get_session
-from app.schemas import CompanyRead, MeetingCreate, MeetingRead, Persona
+from app.schemas import DEFAULT_PERSONA, CompanyRead, MeetingCreate, MeetingRead, Persona
 from app.services import brief_engine, brief_render, sources
 
 router = APIRouter(tags=["meetings"])
@@ -138,6 +138,22 @@ def generate_pending_briefs() -> None:
                 generate_one_task(meeting_id, persona)
     finally:
         _gen_lock.release()
+
+
+def get_active_persona(session: Session) -> str:
+    """The signed-in user's persona (single-row AppState); default if unset."""
+    st = session.get(models.AppState, 1)
+    return st.active_persona if st and st.active_persona else DEFAULT_PERSONA
+
+
+def set_active_persona(session: Session, persona: str) -> None:
+    st = session.get(models.AppState, 1)
+    if st is None:
+        st = models.AppState(id=1, active_persona=persona)
+    else:
+        st.active_persona = persona
+    session.add(st)
+    session.commit()
 
 
 def generate_persona_briefs(persona: str) -> int:
@@ -384,12 +400,30 @@ def get_companies() -> List[CompanyRead]:
     return sources.list_companies()
 
 
+@router.get("/session/persona")
+def read_session_persona(session: Session = Depends(get_session)) -> dict:
+    return {"active_persona": get_active_persona(session)}
+
+
+@router.put("/session/persona", status_code=status.HTTP_202_ACCEPTED)
+def set_session_persona(
+    persona: Persona,
+    background_tasks: BackgroundTasks,
+    session: Session = Depends(get_session),
+) -> dict:
+    """Set the signed-in user's persona (called on login) and queue generation of that
+    persona's brief across ALL meetings. From here on, sync/imports use this persona,
+    so no other persona (e.g. the old default Sales Representative) is generated."""
+    set_active_persona(session, persona.value)
+    background_tasks.add_task(generate_persona_briefs, persona.value)
+    return {"active_persona": persona.value, "queued": True}
+
+
 @router.post("/briefs/generate", status_code=status.HTTP_202_ACCEPTED)
 def generate_briefs_for_persona(
     persona: Persona, background_tasks: BackgroundTasks
 ) -> dict:
     """Queue generation of the given persona's brief across ALL meetings (background,
-    earliest first). Called on login so the selected persona's briefs are generated
-    automatically. Idempotent — meetings already ready for that persona are skipped."""
+    earliest first). Idempotent — meetings already ready for that persona are skipped."""
     background_tasks.add_task(generate_persona_briefs, persona.value)
     return {"queued": True, "persona": persona.value}

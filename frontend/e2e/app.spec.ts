@@ -79,28 +79,23 @@ test("create a meeting via the dialog lands on the dashboard", async ({ page }) 
   await page.screenshot({ path: `${SHOTS}/03-dashboard.png`, fullPage: true });
 });
 
-test("brief view renders, toggles personas, and Scout answers", async ({ page }) => {
+test("brief view shows only the user's persona tab, and Scout answers", async ({ page }) => {
   const id = await seedMeeting("sales_rep");
   await page.goto(`/meeting/${id}`);
 
-  // Sales Representative brief (full nine sections)
+  // Sales Representative brief (the signed-in persona)
   await expect(page.getByRole("heading", { name: "The Sleep Company", level: 1 })).toBeVisible();
   await expect(page.getByText("Sales Representative · Brief")).toBeVisible();
   await expect(page.getByText("ARR")).toBeVisible();          // KPI strip
   await expect(page.getByText("₹700 Cr")).toBeVisible();
   await expect(page.getByRole("heading", { name: /Pain Hypotheses/ })).toBeVisible(); // a Sales Rep section
   await expect(page.getByText(/Ready · \d+ source/)).toBeVisible();
-  await page.screenshot({ path: `${SHOTS}/04-brief-sales-rep.png`, fullPage: true });
 
-  // Toggle → Sales Manager (distinct coaching section set)
-  await page.getByRole("tab", { name: "Sales Manager" }).click();
-  await expect(page.getByRole("heading", { name: "Coaching Focus" })).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${SHOTS}/05-brief-sales-manager.png`, fullPage: true });
-
-  // Toggle → VP of Sales (executive section set)
-  await page.getByRole("tab", { name: "VP of Sales" }).click();
-  await expect(page.getByRole("heading", { name: /Executive Recommendation/ })).toBeVisible({ timeout: 20_000 });
-  await page.screenshot({ path: `${SHOTS}/06-brief-vp-sales.png`, fullPage: true });
+  // Single-persona app: only the signed-in user's tab is shown — no switching.
+  await expect(page.getByRole("tab", { name: "Sales Representative" })).toBeVisible();
+  await expect(page.getByRole("tab", { name: "Sales Manager" })).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "VP of Sales" })).toHaveCount(0);
+  await page.screenshot({ path: `${SHOTS}/04-brief-single-persona.png`, fullPage: true });
 
   // Scout answers ("Send" exact — distinct from the toolbar's "Send as email")
   await page.getByPlaceholder("Ask Scout…").fill("Who led their last round?");

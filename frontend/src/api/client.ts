@@ -36,6 +36,12 @@ export async function generateBriefsForPersona(persona: Persona): Promise<void> 
   await api.post("/briefs/generate", null, { params: { persona } });
 }
 
+// Set the signed-in user's active persona (server-side) AND queue generation of that
+// persona's briefs. From here on, calendar sync / imports use this persona.
+export async function setSessionPersona(persona: Persona): Promise<void> {
+  await api.put("/session/persona", null, { params: { persona } });
+}
+
 export async function listMeetings(): Promise<MeetingRead[]> {
   const { data } = await api.get<MeetingRead[]>("/meetings");
   return data;

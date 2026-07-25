@@ -144,22 +144,19 @@ export function BriefView() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="seg" role="tablist" aria-label="View as persona">
-            {PERSONAS.map((p) => {
-              const active = viewPersona === p;
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setActivePersona(p)}
-                  className={`seg-btn ${active ? "on" : ""}`}
-                >
-                  {PERSONA_LABELS[p]}
-                </button>
-              );
-            })}
+          {/* Single-persona app: the signed-in user only ever sees their own persona. */}
+          <div className="seg" role="tablist" aria-label="Persona">
+            {(user ? [user.persona] : PERSONAS).map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="tab"
+                aria-selected={viewPersona === p}
+                className="seg-btn on"
+              >
+                {PERSONA_LABELS[p]}
+              </button>
+            ))}
           </div>
           {ready && (
             <>

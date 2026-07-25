@@ -202,7 +202,9 @@ def import_calendar_events() -> Tuple[int, int, int, int, int]:
                     why="Imported from Google Calendar",
                     agenda=e.get("description", "") or "",
                     start_time=new_start,
-                    persona="sales_rep",
+                    # The signed-in user's persona — not a hardcoded default — so imported
+                    # meetings generate only that persona's brief.
+                    persona=meetings_api.get_active_persona(session),
                     primary_status="pending",  # queued for the background worker
                     google_event_id=e["id"],
                     google_html_link=e.get("html_link"),
