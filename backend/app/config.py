@@ -67,6 +67,13 @@ class Settings(BaseSettings):
     # queued briefs in the background, earliest meeting first. Off in tests/E2E so
     # the explicit-sync assertions run against a clean, un-raced DB.
     sync_on_startup: bool = True
+    # Recurring background Google Calendar sync: a daemon thread re-imports prospect
+    # events every `calendar_sync_seconds` (and queues briefs for new/changed ones),
+    # so meetings added in Google appear without a manual "Sync" click. Fail-soft —
+    # an expired token just logs and retries. Off in tests/E2E so it can't race the
+    # explicit-sync assertions.
+    calendar_sync_enabled: bool = True
+    calendar_sync_seconds: int = 30
 
     # ---- Automated brief emails ----
     # When on, a meeting's brief is emailed automatically as soon as it's ready, and

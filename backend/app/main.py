@@ -70,6 +70,10 @@ def on_startup() -> None:
         from app.services import notifier
 
         threading.Thread(target=notifier.reminder_loop, daemon=True).start()
+    if settings.calendar_sync_enabled:
+        # Long-lived scheduler: re-import Google Calendar prospect events every
+        # `calendar_sync_seconds` so meetings added in Google appear automatically.
+        threading.Thread(target=google.calendar_sync_loop, daemon=True).start()
 
 
 @app.get("/health", response_model=HealthResponse)

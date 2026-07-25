@@ -21,6 +21,9 @@ os.environ["MOCK_WEB"] = "1"
 # Tests drive calendar sync explicitly; keep the boot-time auto-sync off so its
 # background pass can't race the "clean first sync" assertions.
 os.environ["SYNC_ON_STARTUP"] = "0"
+# Recurring calendar auto-sync off in tests so its daemon can't race the explicit-sync
+# assertions in test_google (which drive import_calendar_events directly).
+os.environ["CALENDAR_SYNC_ENABLED"] = "0"
 # Auto-email: keep the master switch OFF so the on-ready hook and the reminder
 # daemon never fire during unrelated tests; test_notifier.py calls the notifier
 # functions directly. A recipient is set so those direct calls have a target.

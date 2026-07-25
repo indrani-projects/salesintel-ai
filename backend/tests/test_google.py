@@ -148,3 +148,36 @@ def test_personal_events_are_not_imported():
     for summary in ("Lunch with Mom", "Dentist", "Gym", "Pick up kids"):
         slug, name = _match_prospect({"summary": summary})
         assert (slug, name) == (None, None), summary
+
+
+def test_sync_calendar_once_returns_result_in_mock(client):
+    # The recurring scheduler's one-pass helper works standalone (mock events).
+    from app.api import google
+
+    result = google.sync_calendar_once()
+    assert result is not None
+    assert result[0] == 2  # two canned events scanned
+
+
+def test_sync_calendar_once_is_fail_soft_on_expired_token(client, monkeypatch):
+    # A dead token must NOT raise out of the loop — the pass returns None.
+    from app.api import google
+
+    def _boom():
+        raise Exception("invalid_grant: Token has been expired or revoked.")
+
+    monkeypatch.setattr(google, "import_calendar_events", _boom)
+    assert google.sync_calendar_once() is None
+
+
+def test_calendar_sync_endpoint_reports_clear_error_on_expired_token(client, monkeypatch):
+    # The manual Sync button must surface a clear "reconnect" message, not a raw 500.
+    from app.api import google
+
+    def _boom():
+        raise Exception("('invalid_grant: Token has been expired or revoked.', {})")
+
+    monkeypatch.setattr(google, "import_calendar_events", _boom)
+    r = client.post("/integrations/google/calendar/sync")
+    assert r.status_code == 400
+    assert "reconnect" in r.json()["detail"].lower() or "revoked" in r.json()["detail"].lower()

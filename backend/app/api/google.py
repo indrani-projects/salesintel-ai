@@ -10,6 +10,7 @@ Endpoints:
 from __future__ import annotations
 
 import re
+import time
 from datetime import datetime, timezone
 from typing import Optional, Tuple
 
@@ -227,6 +228,39 @@ def import_calendar_events() -> Tuple[int, int, int, int]:
     return scanned, imported, updated, skipped
 
 
+def _is_auth_error(exc: Exception) -> bool:
+    """True when the failure is a dead/expired OAuth token (needs a reconnect)."""
+    msg = str(exc).lower()
+    return "invalid_grant" in msg or "expired" in msg or "revoked" in msg
+
+
+def sync_calendar_once() -> Optional[Tuple[int, int, int, int]]:
+    """One import pass + background-safe brief generation. Fail-soft: returns None on
+    any error (e.g. an expired token) instead of raising, so the recurring scheduler
+    never dies. Used by both the startup pass and the recurring loop."""
+    try:
+        if not google_service.is_connected():
+            return None
+        result = import_calendar_events()
+        imported, updated = result[1], result[2]
+        if imported or updated:
+            meetings_api.generate_pending_briefs()
+            print(f"[calendar-sync] imported {imported}, updated {updated}", flush=True)
+        return result
+    except Exception as exc:  # noqa: BLE001 — a bad token must not kill the loop
+        hint = " (token expired/revoked — reconnect Google)" if _is_auth_error(exc) else ""
+        print(f"[calendar-sync] pass failed: {exc}{hint}", flush=True)
+        return None
+
+
+def calendar_sync_loop() -> None:
+    """Long-lived daemon: re-sync the calendar every `calendar_sync_seconds`."""
+    interval = max(5, settings.calendar_sync_seconds)
+    while True:
+        sync_calendar_once()
+        time.sleep(interval)
+
+
 @router.post("/integrations/google/calendar/sync", response_model=CalendarSyncResult)
 def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
     """Import upcoming prospect events into meetings (fast), then kick off brief
@@ -235,7 +269,17 @@ def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
     if not google_service.is_connected():
         raise HTTPException(status_code=400, detail="Google is not connected.")
 
-    scanned, imported, updated, skipped = import_calendar_events()
+    try:
+        scanned, imported, updated, skipped = import_calendar_events()
+    except Exception as exc:  # noqa: BLE001 — surface a clear error, never a raw 500
+        if _is_auth_error(exc):
+            raise HTTPException(
+                status_code=400,
+                detail="Google connection expired or was revoked — open Settings, "
+                "Disconnect, then Connect Google again.",
+            )
+        raise HTTPException(status_code=502, detail=f"Calendar sync failed: {exc}")
+
     if imported or updated:
         background_tasks.add_task(meetings_api.generate_pending_briefs)
 

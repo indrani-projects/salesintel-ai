@@ -30,6 +30,7 @@ export default defineConfig({
         MOCK_GOOGLE: "1",
         MOCK_WEB: "1",
         SYNC_ON_STARTUP: "0",
+        CALENDAR_SYNC_ENABLED: "0",
         AUTO_EMAIL_ENABLED: "0",
         DEFAULT_RECIPIENT: "rep@salesintel.test",
         DATABASE_URL: "sqlite:///./e2e_salesintel.db",
