@@ -88,6 +88,17 @@ class Settings(BaseSettings):
     # When true, web_sources returns deterministic canned intel — tests/E2E, no network.
     mock_web: bool = False
 
+    # ---- Prepared web docs (deterministic foundation stage, NO LLM) ----
+    # `python -m app.tools.prepare "<company>"` fetches real web pages + Wikipedia,
+    # extracts the main text (trafilatura), keeps only passages matching the research-
+    # guide keywords, scores source credibility, and caches clean Markdown +
+    # manifest.json under backend/.cache/prepared/<slug>/. load_company_intel prefers
+    # these over the live feeds when present. `mock_web` disables all prep network.
+    prep_enabled: bool = True
+    prep_max_results: int = 10       # candidate result URLs per company (before Wikipedia)
+    prep_ttl_hours: int = 168        # prepared docs are heavier to build — cache a week
+    prep_max_doc_chars: int = 8000   # cap on each prepared Markdown doc
+
     @property
     def cors_list(self) -> List[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
