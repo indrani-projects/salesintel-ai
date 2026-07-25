@@ -98,7 +98,7 @@ def test_email_preview_and_demo_send(client):
     assert "The Sleep Company" in pj["subject"]
     assert "Sales Representative" in pj["subject"]
     assert pj["body_html"].strip()
-    assert pj["attachment_filename"].endswith("-sales_rep-brief.html")
+    assert pj["attachment_filename"].endswith("-sales_rep-brief.pdf")
     assert pj["email_configured"] is False  # MOCK_EMAIL → demo mode
 
     send = client.post(
@@ -119,7 +119,7 @@ def test_email_preview_persona_specific(client):
         f"/meetings/{m['id']}/brief/email/preview", params={"persona": "sales_manager"}
     )
     assert prev.status_code == 200, prev.text
-    assert prev.json()["attachment_filename"].endswith("-sales_manager-brief.html")
+    assert prev.json()["attachment_filename"].endswith("-sales_manager-brief.pdf")
 
 
 def test_email_preview_409_when_not_ready(client):

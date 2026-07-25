@@ -30,22 +30,24 @@ def test_compose_sales_rep_highlights_angle_and_stakeholders():
     composed = email_service.compose_brief_email(_brief("sales_rep"))
     assert "Sales Representative" in composed.subject
     assert "The Sleep Company" in composed.subject
-    assert composed.attachment_filename.endswith("-sales_rep-brief.html")
+    assert composed.attachment_filename.endswith("-sales_rep-brief.pdf")
     # Sales Rep digest features the recommended angle + stakeholders sections.
     # (Titles are HTML-escaped, so match on apostrophe-free substrings.)
     assert "Recommended Angle" in composed.body_html
     assert "Key Stakeholders" in composed.body_html
-    assert composed.attachment_bytes  # full brief HTML attached
+    # The attachment is a real PDF (previews as a document, not raw HTML).
+    assert composed.attachment_subtype == "pdf"
+    assert composed.attachment_bytes[:5] == b"%PDF-"
 
 
 def test_compose_persona_specific_sections():
     mgr = email_service.compose_brief_email(_brief("sales_manager"))
     assert "Coaching Focus" in mgr.body_html
-    assert mgr.attachment_filename.endswith("-sales_manager-brief.html")
+    assert mgr.attachment_filename.endswith("-sales_manager-brief.pdf")
 
     vp = email_service.compose_brief_email(_brief("vp_sales"))
     assert "Executive Recommendation" in vp.body_html
-    assert vp.attachment_filename.endswith("-vp_sales-brief.html")
+    assert vp.attachment_filename.endswith("-vp_sales-brief.pdf")
 
 
 def test_send_is_demo_when_not_configured():

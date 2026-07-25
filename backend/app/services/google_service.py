@@ -256,7 +256,9 @@ def insert_event(*, summary: str, start: datetime, description: str = "",
 # --------------------------------------------------------------------------- #
 def send_message(*, to: str, subject: str, html: str, plain: str = "",
                  attachment_bytes: Optional[bytes] = None,
-                 attachment_filename: Optional[str] = None) -> str:
+                 attachment_filename: Optional[str] = None,
+                 attachment_maintype: str = "application",
+                 attachment_subtype: str = "pdf") -> str:
     """Send an email as the connected Gmail account; returns the sent message id."""
     if settings.mock_google:
         return "mock-sent-message"
@@ -268,8 +270,8 @@ def send_message(*, to: str, subject: str, html: str, plain: str = "",
     msg.set_content(plain or "See the HTML version of this brief.")
     msg.add_alternative(html, subtype="html")
     if attachment_bytes and attachment_filename:
-        msg.add_attachment(attachment_bytes, maintype="text", subtype="html",
-                           filename=attachment_filename)
+        msg.add_attachment(attachment_bytes, maintype=attachment_maintype,
+                           subtype=attachment_subtype, filename=attachment_filename)
     raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
     service = build("gmail", "v1", credentials=_credentials(), cache_discovery=False)
     sent = service.users().messages().send(userId="me", body={"raw": raw}).execute()

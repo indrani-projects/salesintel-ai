@@ -148,7 +148,7 @@ test("send-as-email composes a persona digest and demo-sends", async ({ page }) 
   // Recipient prefilled, subject + attachment composed, preview rendered.
   await expect(dialog.getByLabel("To")).not.toHaveValue("");
   await expect(dialog.getByText(/Sales Representative Brief/)).toBeVisible({ timeout: 20_000 });
-  await expect(dialog.getByText(/-sales_rep-brief\.html/)).toBeVisible();
+  await expect(dialog.getByText(/-sales_rep-brief\.pdf/)).toBeVisible();
   await expect(dialog.getByText(/Demo mode/)).toBeVisible();
   await page.screenshot({ path: `${SHOTS}/08-email-dialog.png`, fullPage: true });
 
