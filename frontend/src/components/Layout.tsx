@@ -1,14 +1,17 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
   Building2,
   CalendarDays,
   LayoutGrid,
+  LogOut,
   Radar,
   Settings,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { getHealth } from "../api/client";
+import { PERSONA_LABELS } from "../api/types";
+import { initials, useAuth } from "../lib/auth";
 
 type NavItem = {
   to: string;
@@ -70,6 +73,12 @@ function NavRow({ item }: { item: NavItem }) {
 }
 
 function UserFooter({ online, configured }: { online: boolean; configured: boolean }) {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const onLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
   return (
     <div className="border-t border-white/10 pt-3">
       <div className="mb-2 flex items-center gap-1.5 px-2 text-[11px] text-nav-ink/70">
@@ -81,14 +90,24 @@ function UserFooter({ online, configured }: { online: boolean; configured: boole
         LLM {configured ? "on" : online ? "off" : "—"}
       </div>
       <div className="flex items-center gap-2.5 px-2 py-1 text-[13px] text-white">
-        <span className="grid h-7 w-7 place-items-center rounded-full bg-brand-600 text-[12px] font-bold text-white">
-          RM
+        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand-600 text-[12px] font-bold text-white">
+          {user ? initials(user.name) : "U"}
         </span>
-        <div className="leading-tight">
-          Rohan M.
-          <br />
-          <span className="text-[11px] text-faint">Sales Representative</span>
+        <div className="min-w-0 flex-1 leading-tight">
+          <div className="truncate">{user?.name ?? "Guest"}</div>
+          <span className="text-[11px] text-faint">
+            {user ? PERSONA_LABELS[user.persona] : ""}
+          </span>
         </div>
+        <button
+          type="button"
+          onClick={onLogout}
+          title="Sign out"
+          aria-label="Sign out"
+          className="shrink-0 rounded-md p-1.5 text-nav-ink/70 transition-colors hover:bg-white/10 hover:text-white"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
       </div>
     </div>
   );

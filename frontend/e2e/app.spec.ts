@@ -21,6 +21,31 @@ async function seedMeeting(persona = "sales_rep") {
   return m.id as number;
 }
 
+// The app is gated by a client-side demo login. Seed the auth session so the shell
+// renders for every test; the dedicated login test clears it to exercise the form.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    window.localStorage.setItem(
+      "salesintel.auth",
+      JSON.stringify({ name: "Rohan M.", persona: "sales_rep" }),
+    );
+  });
+});
+
+test("login page signs in with a persona and lands on the app", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.removeItem("salesintel.auth"));
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+  await page.fill("#login-name", "Rohan M.");
+  await page.fill("#login-password", "demo");
+  await page.selectOption("#login-persona", "sales_rep");
+  await page.screenshot({ path: `${SHOTS}/00-login.png`, fullPage: true });
+  await page.getByRole("button", { name: /enter workspace/i }).click();
+  await expect(page).toHaveURL(/\/calendar/);
+  await expect(page.getByText("Rohan M.").first()).toBeVisible(); // sidebar reflects the user
+});
+
 test("app shell renders with the workspace nav", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("SalesIntel AI").first()).toBeVisible();

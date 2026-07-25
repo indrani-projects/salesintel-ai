@@ -132,6 +132,19 @@ def test_email_preview_409_when_not_ready(client):
     assert r.status_code == 409
 
 
+def test_generate_briefs_for_persona(client):
+    # Logging in with a persona queues that persona's briefs across all meetings.
+    m = _create(client)
+    _poll_brief(client, m["id"])  # primary (sales_rep) ready
+    r = client.post("/briefs/generate", params={"persona": "vp_sales"})
+    assert r.status_code == 202
+    assert r.json()["persona"] == "vp_sales"
+    # BackgroundTasks run synchronously in TestClient → the vp_sales brief is now ready.
+    b = _poll_brief(client, m["id"], persona="vp_sales")
+    assert b["status"] == "ready"
+    assert len(b["content"]["sections"]) == 6
+
+
 def test_delete_meeting(client):
     m = _create(client)
     assert client.delete(f"/meetings/{m['id']}").status_code == 204

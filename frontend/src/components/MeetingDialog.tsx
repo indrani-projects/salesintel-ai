@@ -4,6 +4,7 @@ import { CalendarPlus, Loader2, X } from "lucide-react";
 import { createMeeting, listCompanies } from "../api/client";
 import type { CompanyRead, MeetingCreate, Persona } from "../api/types";
 import { PERSONAS, PERSONA_ACCENTS, PERSONA_LABELS, PERSONA_TAGLINES } from "../lib/persona";
+import { useAuth } from "../lib/auth";
 
 // Any company works (we pull live web intel by name); these are the research
 // guide's 5 targets, offered as autocomplete suggestions.
@@ -38,7 +39,9 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
   const [why, setWhy] = useState("");
   const [agenda, setAgenda] = useState("");
   const [start, setStart] = useState(toLocalInput(initialStart));
-  const [persona, setPersona] = useState<Persona>("sales_rep");
+  const { user } = useAuth();
+  const defaultPersona: Persona = user?.persona ?? "sales_rep";
+  const [persona, setPersona] = useState<Persona>(defaultPersona);
 
   useEffect(() => {
     if (open) {
@@ -47,9 +50,9 @@ export function MeetingDialog({ open, onClose, initialStart }: Props) {
       setWhy("");
       setAgenda("");
       setStart(toLocalInput(initialStart));
-      setPersona("sales_rep");
+      setPersona(defaultPersona);
     }
-  }, [open, initialStart]);
+  }, [open, initialStart, defaultPersona]);
 
   const mutation = useMutation({
     mutationFn: (payload: MeetingCreate) => createMeeting(payload),

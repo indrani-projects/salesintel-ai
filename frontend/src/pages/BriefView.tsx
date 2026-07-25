@@ -16,6 +16,7 @@ import { ChatPanel } from "../components/ChatPanel";
 import { EmailDialog } from "../components/EmailDialog";
 import { CONFIDENCE_META, formatDateTime } from "../lib/format";
 import { PERSONAS, PERSONA_LABELS } from "../lib/persona";
+import { useAuth } from "../lib/auth";
 
 function KpiStrip({ facts }: { facts: KeyFact[] }) {
   const items = facts.slice(0, 4);
@@ -81,6 +82,7 @@ export function BriefView() {
   const [downloading, setDownloading] = useState(false);
   const [activePersona, setActivePersona] = useState<Persona | null>(null);
   const [emailOpen, setEmailOpen] = useState(false);
+  const { user } = useAuth();
 
   const { data: meeting } = useQuery({
     queryKey: ["meeting", meetingId],
@@ -88,14 +90,15 @@ export function BriefView() {
     enabled: Number.isFinite(meetingId),
   });
 
-  // Initialize the viewed persona to the meeting's primary persona once loaded.
+  // Default the viewed persona to the signed-in user's persona (their brief), falling
+  // back to the meeting's primary persona. The user can still toggle via the tabs.
   useEffect(() => {
-    if (meeting && activePersona === null) {
-      setActivePersona(meeting.persona);
+    if (activePersona === null && (user || meeting)) {
+      setActivePersona(user?.persona ?? meeting?.persona ?? "sales_rep");
     }
-  }, [meeting, activePersona]);
+  }, [user, meeting, activePersona]);
 
-  const viewPersona: Persona = activePersona ?? meeting?.persona ?? "sales_rep";
+  const viewPersona: Persona = activePersona ?? user?.persona ?? "sales_rep";
 
   const { data: brief, isLoading } = useQuery({
     queryKey: ["brief", meetingId, viewPersona],

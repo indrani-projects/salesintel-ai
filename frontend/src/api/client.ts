@@ -30,6 +30,12 @@ export async function listCompanies(): Promise<CompanyRead[]> {
   return data;
 }
 
+// Queue background generation of a persona's brief across ALL meetings (called on
+// login so the selected persona's briefs are generated automatically).
+export async function generateBriefsForPersona(persona: Persona): Promise<void> {
+  await api.post("/briefs/generate", null, { params: { persona } });
+}
+
 export async function listMeetings(): Promise<MeetingRead[]> {
   const { data } = await api.get<MeetingRead[]>("/meetings");
   return data;

@@ -140,6 +140,30 @@ def generate_pending_briefs() -> None:
         _gen_lock.release()
 
 
+def generate_persona_briefs(persona: str) -> int:
+    """Ensure the given persona's brief exists + is ready for EVERY meeting. Used when
+    a user logs in with a selected persona so that persona's briefs are generated
+    automatically. Skips meetings whose persona brief is already ready; each generation
+    is exception-safe. Returns how many were (re)generated."""
+    with Session(engine) as session:
+        meeting_ids = [m.id for m in session.exec(select(models.Meeting)).all()]
+
+    generated = 0
+    for mid in meeting_ids:
+        with Session(engine) as s:
+            existing = s.exec(
+                select(models.Brief).where(
+                    models.Brief.meeting_id == mid,
+                    models.Brief.persona == persona,
+                )
+            ).first()
+            if existing is not None and existing.status == "ready":
+                continue
+        _run_generation(mid, persona)  # own session, fail-soft
+        generated += 1
+    return generated
+
+
 def requeue_meeting_briefs(session: Session, meeting: models.Meeting) -> None:
     """Reset a meeting's briefs to queued and clear their content — used when a
     calendar edit changed the prospect company, so generate_pending_briefs rebuilds
@@ -353,3 +377,14 @@ def regenerate_brief(
 @router.get("/companies", response_model=List[CompanyRead])
 def get_companies() -> List[CompanyRead]:
     return sources.list_companies()
+
+
+@router.post("/briefs/generate", status_code=status.HTTP_202_ACCEPTED)
+def generate_briefs_for_persona(
+    persona: Persona, background_tasks: BackgroundTasks
+) -> dict:
+    """Queue generation of the given persona's brief across ALL meetings (background,
+    earliest first). Called on login so the selected persona's briefs are generated
+    automatically. Idempotent — meetings already ready for that persona are skipped."""
+    background_tasks.add_task(generate_persona_briefs, persona.value)
+    return {"queued": True, "persona": persona.value}
