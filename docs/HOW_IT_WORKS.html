@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How SalesIntel AI Works — A Plain-English Guide</title>
+<style>
+  :root {
+    --bg:        #f6f7fb;
+    --surface:   #ffffff;
+    --surface-2: #eef0f7;
+    --line:      #e1e4ef;
+    --ink:       #191c2e;
+    --ink-2:     #4b5069;
+    --ink-3:     #767c96;
+    --accent:    #4b4ee6;
+    --accent-2:  #3a3cc0;
+    --accent-wash:#ececfb;
+    --plane-a:   #2f7db8;   /* prospect side */
+    --plane-a-wash:#e7f1f9;
+    --plane-b:   #8a4b9f;   /* zoho side */
+    --plane-b-wash:#f4e9f7;
+    --free:      #1f8a5b;
+    --free-wash: #e4f3ec;
+    --ai:        #b4611a;   /* the single AI step */
+    --ai-wash:   #f8ecdf;
+
+    --maxw: 812px;
+    --radius: 14px;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+    --shadow: 0 1px 2px rgba(20,24,45,.05), 0 10px 30px rgba(20,24,45,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #0e1020;
+      --surface:   #171a2e;
+      --surface-2: #1f2339;
+      --line:      #2c3152;
+      --ink:       #e9ebf6;
+      --ink-2:     #aab0cb;
+      --ink-3:     #7b8199;
+      --accent:    #8f92f6;
+      --accent-2:  #adaeff;
+      --accent-wash:#1d2048;
+      --plane-a:   #5ea9e0;
+      --plane-a-wash:#122536;
+      --plane-b:   #c489d8;
+      --plane-b-wash:#2a1830;
+      --free:      #50c48c;
+      --free-wash: #102c1f;
+      --ai:        #e0964f;
+      --ai-wash:   #2e2011;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 12px 34px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:#f6f7fb; --surface:#ffffff; --surface-2:#eef0f7; --line:#e1e4ef;
+    --ink:#191c2e; --ink-2:#4b5069; --ink-3:#767c96;
+    --accent:#4b4ee6; --accent-2:#3a3cc0; --accent-wash:#ececfb;
+    --plane-a:#2f7db8; --plane-a-wash:#e7f1f9; --plane-b:#8a4b9f; --plane-b-wash:#f4e9f7;
+    --free:#1f8a5b; --free-wash:#e4f3ec; --ai:#b4611a; --ai-wash:#f8ecdf;
+    --shadow:0 1px 2px rgba(20,24,45,.05), 0 10px 30px rgba(20,24,45,.06);
+  }
+  :root[data-theme="dark"] {
+    --bg:#0e1020; --surface:#171a2e; --surface-2:#1f2339; --line:#2c3152;
+    --ink:#e9ebf6; --ink-2:#aab0cb; --ink-3:#7b8199;
+    --accent:#8f92f6; --accent-2:#adaeff; --accent-wash:#1d2048;
+    --plane-a:#5ea9e0; --plane-a-wash:#122536; --plane-b:#c489d8; --plane-b-wash:#2a1830;
+    --free:#50c48c; --free-wash:#102c1f; --ai:#e0964f; --ai-wash:#2e2011;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 12px 34px rgba(0,0,0,.4);
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  .page {
+    background: var(--bg); color: var(--ink);
+    font-family: var(--sans); line-height: 1.62; font-size: 16.5px;
+    -webkit-font-smoothing: antialiased; padding: 0 20px 100px;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; }
+
+  /* masthead */
+  header.mast { max-width: var(--maxw); margin: 0 auto; padding: 60px 0 34px; border-bottom: 1px solid var(--line); }
+  .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(32px, 5.4vw, 46px); line-height: 1.08; letter-spacing: -0.01em; margin: 16px 0 0; text-wrap: balance; }
+  .lede { color: var(--ink-2); font-size: 19px; line-height: 1.55; margin: 18px 0 26px; max-width: 60ch; }
+  .badges { display: flex; flex-wrap: wrap; gap: 8px; }
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 11.5px; font-weight: 600; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink-2); }
+  .badge.free { background: var(--free-wash); color: var(--free); border-color: transparent; }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+
+  /* section rhythm */
+  section { max-width: var(--maxw); margin: 0 auto; padding: 46px 0 0; }
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; margin: 0 0 8px; }
+  h2 { font-family: var(--serif); font-weight: 700; font-size: clamp(23px, 3.4vw, 29px); line-height: 1.15; letter-spacing: -0.01em; margin: 0 0 14px; text-wrap: balance; }
+  p { margin: 0 0 15px; color: var(--ink-2); }
+  p strong, li strong { color: var(--ink); font-weight: 650; }
+  .lead-in { font-size: 17.5px; color: var(--ink); }
+
+  /* analogy / callout card */
+  .note { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); margin: 4px 0 0; }
+  .note p { margin: 0; color: var(--ink-2); font-size: 15.5px; }
+  .note p + p { margin-top: 10px; }
+
+  /* stack grid */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 17px; box-shadow: var(--shadow); }
+  .tile .role { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); font-weight: 700; }
+  .tile h4 { margin: 5px 0 5px; font-size: 15.5px; color: var(--ink); }
+  .tile .tool { color: var(--accent-2); font-weight: 650; }
+  .tile p { margin: 0; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+
+  /* two planes */
+  .planes { display: grid; grid-template-columns: 1fr auto 1fr; align-items: stretch; gap: 12px; margin-top: 8px; }
+  .plane { border-radius: var(--radius); padding: 18px; border: 1px solid var(--line); background: var(--surface); box-shadow: var(--shadow); }
+  .plane .ptag { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+  .plane h4 { margin: 4px 0 8px; font-size: 16px; color: var(--ink); }
+  .plane p { margin: 0; font-size: 14px; }
+  .plane.a { border-top: 3px solid var(--plane-a); } .plane.a .ptag { color: var(--plane-a); }
+  .plane.b { border-top: 3px solid var(--plane-b); } .plane.b .ptag { color: var(--plane-b); }
+  .join { display: flex; align-items: center; justify-content: center; min-width: 74px; }
+  .joinbox { font-family: var(--mono); font-weight: 700; font-size: 12px; text-align: center; color: var(--accent); background: var(--accent-wash); border: 1px solid var(--accent); border-radius: 12px; padding: 10px 8px; line-height: 1.35; }
+  .keystone { margin-top: 12px; background: var(--accent-wash); border: 1px solid var(--accent); border-radius: var(--radius); padding: 15px 18px; }
+  .keystone p { margin: 0; color: var(--ink); font-size: 14.5px; }
+
+  /* flow strip */
+  .flowstrip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 16px; }
+  .fs-step { flex: 1; min-width: 130px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; }
+  .fs-step .n { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); font-weight: 700; }
+  .fs-step .t { font-size: 13.5px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+  .fs-arrow { color: var(--ink-3); font-weight: 700; }
+
+  /* pipeline */
+  .pipe { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+  .step { display: grid; grid-template-columns: 42px 1fr; gap: 15px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 17px; box-shadow: var(--shadow); }
+  .step .num { font-family: var(--mono); font-weight: 700; font-size: 15px; width: 42px; height: 42px; border-radius: 11px; display: flex; align-items: center; justify-content: center; background: var(--surface-2); color: var(--accent); border: 1px solid var(--line); }
+  .step h4 { margin: 2px 0 4px; font-size: 16px; color: var(--ink); display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .step p { margin: 0; font-size: 14.5px; color: var(--ink-2); }
+  .tag { font-family: var(--mono); font-size: 10px; letter-spacing: .05em; text-transform: uppercase; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+  .tag.plain { background: var(--free-wash); color: var(--free); }
+  .tag.ai { background: var(--ai-wash); color: var(--ai); }
+
+  .midcall { margin-top: 12px; background: var(--ai-wash); border: 1px solid var(--ai); border-radius: var(--radius); padding: 15px 18px; }
+  .midcall p { margin: 0; color: var(--ink); font-size: 14.5px; }
+
+  /* brief anatomy */
+  .sections-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 4px 0 0; padding: 0; list-style: none; counter-reset: sec; }
+  .sections-list li { display: flex; gap: 10px; align-items: baseline; font-size: 14.5px; color: var(--ink-2); padding: 7px 0; border-bottom: 1px solid var(--line); }
+  .sections-list li::before { counter-increment: sec; content: counter(sec, decimal-leading-zero); font-family: var(--mono); font-size: 11px; color: var(--accent); font-weight: 700; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+  .chip { font-family: var(--mono); font-size: 11.5px; padding: 4px 10px; border-radius: 7px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); }
+
+  /* why grid */
+  .why { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+  .why .w { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+  .why .w h4 { margin: 0 0 5px; font-size: 15px; color: var(--ink); }
+  .why .w p { margin: 0; font-size: 14px; }
+
+  code { font-family: var(--mono); font-size: .85em; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; color: var(--accent-2); border: 1px solid var(--line); }
+
+  footer.foot { max-width: var(--maxw); margin: 60px auto 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 13px; font-family: var(--mono); }
+
+  @media (max-width: 640px) {
+    .grid, .why { grid-template-columns: 1fr; }
+    .planes { grid-template-columns: 1fr; }
+    .join { min-width: 0; } .joinbox { width: 100%; }
+    .sections-list { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="mast">
+    <div class="eyebrow">SalesIntel AI · How it works</div>
+    <h1>A research analyst that preps your meeting before you do.</h1>
+    <p class="lede">A plain-English guide to what powers SalesIntel AI — the technology, the journey your data takes, and the source-cited briefing that comes out the other end.</p>
+    <div class="badges">
+      <span class="badge free"><span class="dot"></span>$0 running cost</span>
+      <span class="badge">Every fact cited</span>
+      <span class="badge">Tailored to 6 roles</span>
+      <span class="badge">Built on free tiers</span>
+    </div>
+  </header>
+
+  <section>
+    <p class="kicker">The idea in one breath</p>
+    <h2>Read the web about a prospect, match it to Zoho, hand the rep a briefing.</h2>
+    <p class="lead-in">Before a sales call, a good rep spends the night before searching the web about the company they're meeting — the recent news, the funding, who's who, what they might need. <strong>SalesIntel AI does that reading, organizing, and first-draft writing automatically</strong>, and produces a one-page briefing where every claim links back to where it came from.</p>
+    <div class="note">
+      <p><strong>The plain-English version:</strong> point it at a company. It quietly reads ~10–15 public web pages about them, keeps only the sales-relevant facts, checks how trustworthy each source is, matches the company's likely needs to Zoho's product line, and writes a tailored, cited briefing — ready by the time the rep sits down.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The tech stack</p>
+    <h2>Eight moving parts, each doing one job — all on free tiers.</h2>
+    <p>You don't need to know the names to use the product, but here's what's under the hood, described by what it does <em>for you</em>.</p>
+    <div class="grid">
+      <div class="tile">
+        <div class="role">What you click</div>
+        <h4>The web app · <span class="tool">React</span></h4>
+        <p>The calendar, dashboard, briefing pages, and Scout chat you use in your browser.</p>
+      </div>
+      <div class="tile">
+        <div class="role">The engine</div>
+        <h4>The service · <span class="tool">FastAPI (Python)</span></h4>
+        <p>The behind-the-scenes worker that gathers data, runs the steps, and serves the app.</p>
+      </div>
+      <div class="tile">
+        <div class="role">The memory</div>
+        <h4>The database · <span class="tool">SQLite</span></h4>
+        <p>A lightweight file that remembers your meetings, briefs, and chat history.</p>
+      </div>
+      <div class="tile">
+        <div class="role">Reads web pages</div>
+        <h4>The extractor · <span class="tool">trafilatura</span></h4>
+        <p>Opens a web page and pulls out the real article text, throwing away menus and ads.</p>
+      </div>
+      <div class="tile">
+        <div class="role">Finds the pages</div>
+        <h4>Search · <span class="tool">DuckDuckGo + Wikipedia</span></h4>
+        <p>Locates relevant pages about a company — no paid search key required.</p>
+      </div>
+      <div class="tile">
+        <div class="role">Writes the brief</div>
+        <h4>The AI · <span class="tool">Google Gemini (free)</span></h4>
+        <p>The language model that turns the organized notes into a readable briefing.</p>
+      </div>
+      <div class="tile">
+        <div class="role">Connects your world</div>
+        <h4>Google · <span class="tool">Calendar + Gmail</span></h4>
+        <p>Pulls meetings from your calendar automatically and emails you each brief.</p>
+      </div>
+      <div class="tile">
+        <div class="role">Take-away copy</div>
+        <h4>Export · <span class="tool">in-browser PDF</span></h4>
+        <p>Turns any briefing into a downloadable PDF, right in your browser.</p>
+      </div>
+    </div>
+    <div class="note" style="margin-top:12px;border-left-color:var(--free)">
+      <p><strong>Why it costs nothing to run:</strong> the search is keyless, the AI runs on a free tier, and the database is a local file. No subscriptions, no per-use charges.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The architecture</p>
+    <h2>Two sides that meet in the middle.</h2>
+    <p>The whole system is built to make two very different things comparable: <strong>what's happening at the prospect</strong>, and <strong>what Zoho sells</strong>. Bring them together and you get a pitch, not a summary.</p>
+    <div class="planes">
+      <div class="plane a">
+        <div class="ptag">The prospect side</div>
+        <h4>Outside signal</h4>
+        <p>News, financial filings, the company's own website, and public discussion — gathered from the open web.</p>
+      </div>
+      <div class="join"><div class="joinbox">matched<br>on<br>needs</div></div>
+      <div class="plane b">
+        <div class="ptag">The Zoho side</div>
+        <h4>Product catalog</h4>
+        <p>A curated list of Zoho products and the specific business problem each one solves.</p>
+      </div>
+    </div>
+    <div class="keystone">
+      <p><strong>How they connect:</strong> both sides are described in the same simple vocabulary of business "pain points." A signal about the prospect (say, hiring a new finance leader) points to the Zoho product that addresses it (say, Books or Payroll). That match is what makes the recommendation feel earned rather than generic.</p>
+    </div>
+    <div class="flowstrip">
+      <div class="fs-step"><div class="n">01</div><div class="t">Meeting added</div></div>
+      <div class="fs-arrow">→</div>
+      <div class="fs-step"><div class="n">02</div><div class="t">Brief auto-generates</div></div>
+      <div class="fs-arrow">→</div>
+      <div class="fs-step"><div class="n">03</div><div class="t">You review + ask Scout</div></div>
+      <div class="fs-arrow">→</div>
+      <div class="fs-step"><div class="n">04</div><div class="t">Brief emailed to you</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The data journey</p>
+    <h2>How a company name becomes a briefing.</h2>
+    <p>Here's the path your data actually takes. The important thing to notice: <strong>almost all of it is ordinary, reliable software — no AI involved.</strong> The AI is used once, near the end, to write.</p>
+    <div class="pipe">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h4>Start with a company <span class="tag plain">plain software</span></h4>
+          <p>Either a meeting arrives from your Google Calendar (synced automatically every 30 seconds) or you type one in. The company name kicks everything off.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h4>Read the open web <span class="tag plain">no AI</span></h4>
+          <p>Keyless search plus Wikipedia and public news/filings surface the most relevant pages about the company — no paid data providers.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h4>Extract the real text <span class="tag plain">no AI</span></h4>
+          <p>Each page is stripped down to its actual article — headlines, navigation, and ads discarded — so only the substance remains.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h4>Keep only what matters <span class="tag plain">no AI</span></h4>
+          <p>A keyword guide (built from the client's research playbook) filters the text down to sales-relevant passages — funding, leadership changes, pain signals — and tags each by topic.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">5</div>
+        <div>
+          <h4>Rate each source <span class="tag plain">no AI</span></h4>
+          <p>A simple rulebook scores trustworthiness: an official site or regulatory filing ranks high; a random forum post ranks low. That score travels with every fact.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">6</div>
+        <div>
+          <h4>Bring in the Zoho catalog <span class="tag plain">no AI</span></h4>
+          <p>The prospect's likely needs are matched against the pre-built catalog of Zoho products, so the briefing can point to specific, relevant offerings.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">7</div>
+        <div>
+          <h4>Write the briefing <span class="tag ai">AI · one step</span></h4>
+          <p>Only now does the AI step in. Gemini reads the prepared, trust-scored, cited notes and writes the nine-section brief — shaped to the reader's role and the meeting's agenda.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">8</div>
+        <div>
+          <h4>Deliver it <span class="tag ai">AI for chat</span></h4>
+          <p>The brief appears on screen, downloads as a PDF, and is emailed to the rep. Follow-up questions to <strong>Scout</strong> are answered by AI, grounded in the same sources.</p>
+        </div>
+      </div>
+    </div>
+    <div class="midcall">
+      <p><strong>Why this order matters:</strong> steps 1–6 do the heavy lifting with plain software — free, fast, and fully traceable, because every fact keeps a link to its source. The AI is handed a tidy, cited packet and asked only to write it up. That's what keeps the briefing grounded instead of guessy.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The output</p>
+    <h2>A one-page briefing — cited, and shaped to your role.</h2>
+    <p>For a Sales Representative, the briefing is nine sections. Every claim carries a small citation marker back to its source, a confidence level, and a badge showing how trustworthy that source is.</p>
+    <ul class="sections-list">
+      <li>Company Snapshot</li>
+      <li>Financial &amp; Funding Health</li>
+      <li>Trigger Events / Recent News</li>
+      <li>Go-to-Market &amp; Operating Model</li>
+      <li>Pain Points → mapped to Zoho</li>
+      <li>Tech Stack Signals</li>
+      <li>Key Stakeholders</li>
+      <li>Risks &amp; Watch-outs</li>
+      <li>Recommended Angle</li>
+    </ul>
+    <p style="margin-top:18px">The same research is re-shaped for <strong>six different roles</strong> — a manager gets a coaching lens, an executive gets the revenue view, and so on:</p>
+    <div class="chips">
+      <span class="chip">Sales Representative</span>
+      <span class="chip">Sales Manager</span>
+      <span class="chip">Sales Enablement</span>
+      <span class="chip">Revenue Operations Manager</span>
+      <span class="chip">VP of Sales</span>
+      <span class="chip">SalesIntel AI Admin</span>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Why it holds up</p>
+    <h2>Grounded, cited, cheap, and hands-off.</h2>
+    <div class="why">
+      <div class="w">
+        <h4>Grounded</h4>
+        <p>It only uses what it actually found. Anything it can't support is flagged rather than invented.</p>
+      </div>
+      <div class="w">
+        <h4>Cited</h4>
+        <p>Every fact links to a real source with a trust rating, so a rep can verify before they walk in.</p>
+      </div>
+      <div class="w">
+        <h4>Free to run</h4>
+        <p>Keyless reading, a free-tier AI, and a local database mean no subscriptions and no per-use cost.</p>
+      </div>
+      <div class="w">
+        <h4>Hands-off</h4>
+        <p>Calendar syncs every 30 seconds, briefs generate in the background, and the brief is emailed a day before and an hour before the meeting.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="foot">
+    SalesIntel AI · plain-English overview · every fact traces to a source · no cost to run
+  </footer>
+</div>
+</body>
+</html>
