@@ -75,6 +75,7 @@ feel intelligent.
 | Backend | FastAPI (Python) | Async, minimal boilerplate, ideal for AI orchestration |
 | LLM | OpenAI-compatible client → **Gemini free tier** (default, uses existing Google account); Ollama (local/offline) or Groq free tier as drop-in swaps | Free for a POC; provider swapped via `.env` only |
 | PDF parsing | PyMuPDF (fitz) | Robust text extraction from the source PDFs |
+| Web extraction | trafilatura (keyless) | Main-content extraction from web pages → clean Markdown (no LLM) for the prep stage |
 | Brief export | html2pdf.js (client-side) | HTML→PDF in the browser; **no Windows GTK/system deps** |
 | Database | SQLite + SQLModel | Zero-setup, file-based, perfect for POC |
 | Async jobs | FastAPI BackgroundTasks | No extra infra (Celery/queue is the scale path) |
@@ -236,4 +237,57 @@ Backend uses a single **OpenAI-compatible client**; provider chosen via `.env`
 - Change the agenda and regenerate — verify the emphasis shifts (e.g. Desk vs CRM).
 - Ask the Chatbot a question answerable from the docs (e.g. "who led their last
   round?") and one that isn't — verify it grounds/cites and declines gracefully.
+
+---
+
+## Post-MVP developments (web-to-pitch foundation + persona refresh)
+
+After the MVP, the product is evolving from a single-shot brief into a staged
+**web-to-pitch analysis engine**. The foundation shipped as three no-LLM/data changes
+(Jira epics SI-12/13/14; PRs #11/#12/#13). Each keeps the Gemini call limited to the
+existing synthesis step — the new work is deterministic retrieval, extraction, filtering,
+and structuring.
+
+### Two data planes joined by the brief
+
+- **Plane A — external prospect signal (SI-12, `12-web-doc-prep`).** For a company we read
+  the open web (keyless DuckDuckGo results + Wikipedia + the SI-11 feeds), extract each
+  page's main text with **trafilatura**, keep only passages matching the research guide's
+  **Section 3 keyword taxonomy** (`research_keywords.py`), score each source's trust by
+  domain rules (`credibility.py`), and cache clean `.md` docs + a `manifest.json` under the
+  git-ignored `backend/.cache/prepared/<slug>/`. Orchestrated by `prep.py`; run with
+  `python -m app.tools.prepare "<company>" | --all`. `sources.load_company_intel()` now
+  prefers these prepared docs over the live feeds. **No LLM anywhere** (a test enforces it).
+- **Plane B — internal Zoho catalog (SI-13, `13-zoho-catalog`).** A deterministic product
+  catalog built from static `zoho.com` pages (`zoho_catalog.py` seed → `condense.py`
+  extractive summariser → `build_zoho_catalog.py`), producing full per-product docs under
+  `docs/zoho/products/` plus a compact `docs/zoho/zoho_products_summary.md` that auto-loads
+  into every brief. (The `help.zoho.com` KB portal is a JS app — unreadable keyless — so
+  static product/marketing pages are used.) **No LLM.**
+
+The brief's LLM call now reads a small, pre-filtered, cited, credibility-scored corpus
+(Plane A × Plane B) instead of raw pages — fewer tokens, more grounded, still one call.
+
+### Persona refresh (SI-14, `14-persona-refresh`)
+
+The persona set was replaced from `ae/sdr/se` to the **six personas** in
+`docs/shared/Expected_Features_By_Persona.docx.pdf`: Sales Representative (the old
+nine-section brief), Sales Manager (coaching), Sales Enablement (onboarding/best-practice),
+Revenue Operations Manager (adoption/ROI), VP of Sales (executive), and SalesIntel AI Admin
+(a **data-provenance view** — source inventory, credibility, lineage — leveraging SI-12's
+scoring). The `Persona` enum + `PERSONA_SECTIONS` in `schemas.py` drive per-persona framing
+in `brief_engine.py` and the frontend selector/tabs; a one-time guarded migration in `db.py`
+remaps legacy rows and regenerates stale briefs.
+
+### New CLI tools (see RUNBOOK §2d)
+- `python -m app.tools.prepare "<company>"` / `--all` — build Plane A prepared docs.
+- `python -m app.tools.build_zoho_catalog` — build the Plane B Zoho catalog.
+
+### New config (`backend/.env`)
+`PREP_ENABLED`, `PREP_MAX_RESULTS`, `PREP_TTL_HOURS` (prepared-doc cache). Dependency added:
+`trafilatura`.
+
+> **Next (not yet built):** Phase 2 of the engine — the LLM analysis stages that *join*
+> Plane A × Plane B into verified pain→product recommendations (descriptive + inferential +
+> adversarial verification).
 ```

@@ -1,7 +1,7 @@
 # SalesIntel AI — MVP 1 Jira Backlog (demo pack)
 
 This folder is a **paste-ready Jira backlog** for the SalesIntel AI POC. It re-frames
-everything that was actually built into **11 product epics and 51 stories**, so a PM can
+everything that was actually built into **14 product epics and 62 stories**, so a PM can
 copy each file straight into Jira (Epic → Stories) with no translation.
 
 > **What this is:** a back-fill of already-delivered work into a clean, capability-shaped
@@ -25,7 +25,7 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-1** | Platform Foundation & Data Contract | `01-platform-foundation/` | 5 | Highest |
 | **SI-2** | Calendar & Meeting Management | `02-calendar-meetings/` | 5 | High |
 | **SI-3** | AI Brief Generation Engine | `03-brief-engine/` | 6 | Highest |
-| **SI-4** | Multi-Persona Briefs (AE / SDR / SE) | `04-multi-persona-briefs/` | 4 | High |
+| **SI-4** | Multi-Persona Briefs (AE / SDR / SE) — *superseded by SI-14* | `04-multi-persona-briefs/` | 4 | High |
 | **SI-5** | Scout Chatbot (Grounded Q&A) | `05-scout-chatbot/` | 3 | Medium |
 | **SI-6** | Brief Delivery: Web View & Email | `06-brief-delivery-email/` | 5 | High |
 | **SI-7** | Application Experience & Visual Design | `07-app-experience-design/` | 5 | Medium |
@@ -33,14 +33,21 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-9** | Engineering Workflow & Tooling | `09-engineering-workflow-tooling/` | 5 | High |
 | **SI-10** | Google Workspace Integration (Gmail + Calendar) | `10-google-integration/` | 4 | High |
 | **SI-11** | Web-First Prospect Intel (generic, on-demand) | `11-web-prospect-intel/` | 4 | High |
+| **SI-12** | Web-to-Doc Prospect Prep (Plane A · no LLM) | `12-web-doc-prep/` | 4 | High |
+| **SI-13** | Zoho Product Catalog (Plane B · no LLM) | `13-zoho-catalog/` | 3 | High |
+| **SI-14** | Persona Refresh — 6 personas from the persona doc (supersedes SI-4) | `14-persona-refresh/` | 4 | High |
 
 ## The product in one paragraph
 
-SalesIntel AI auto-generates a grounded, cited **9-section pre-sales brief** about a prospect
-for a sales rep, driven by a **Calendar → Dashboard → Brief → Scout chatbot** flow. The demo
+SalesIntel AI auto-generates a grounded, cited **pre-sales brief** about a prospect for a
+sales rep, driven by a **Calendar → Dashboard → Brief → Scout chatbot** flow. The demo
 scenario is **Zoho selling to The Sleep Company**. The value is the *synthesis layer*: external
-prospect signal (`docs/<company>/`) × internal Zoho product knowledge (`docs/zoho/`) → an actual
-pre-sales angle, tailored per sales persona (AE / SDR / SE), delivered on screen and by email.
+prospect signal × internal Zoho product knowledge → an actual pre-sales angle, now reframed
+for **six personas** (Sales Representative, Sales Manager, Sales Enablement, Revenue Operations
+Manager, VP of Sales, SalesIntel AI Admin — SI-14), delivered on screen and by email. Under it,
+a **two-plane, no-LLM data foundation** reads the open web about a prospect into
+keyword-filtered, credibility-scored cached docs (**Plane A**, SI-12) and joins it against a
+deterministic **Zoho product catalog** (**Plane B**, SI-13).
 
 ## Deliberate POC shortcuts (intentional — noted in the relevant stories)
 
@@ -48,6 +55,7 @@ These are documented design choices for a fast, cheap hypothesis test, each with
 
 - **No vector DB** — all source text is stuffed into one LLM call (RAG is the scale path).
 - **Web-first prospect intel** (Google News RSS / SEC EDGAR / Reddit — keyword-filtered + cached, **no extra LLM call**) with a **local `docs/` fallback**. SI-11 reversed the original "local docs only" shortcut; live LinkedIn/Crunchbase scraping stays out of scope.
+- **No-LLM data foundation** (SI-12/SI-13): the deterministic web-to-doc prep (`trafilatura` extraction + research-guide keyword filtering + rule-based credibility, cached under `backend/.cache/prepared/`) and the Zoho product catalog (`docs/zoho/products/` + a compact `zoho_products_summary.md`) both run with **zero LLM calls** — retrieval/filtering only. Keyed / paid search APIs, JS-rendered KB portals, and RAG/vector retrieval stay out of scope; the free-tier Gemini call runs only in synthesis.
 - **SQLite** (SQLModel) instead of Postgres.
 - **FastAPI BackgroundTasks** instead of a job queue.
 - **MOCK_LLM / MOCK_EMAIL / MOCK_GOOGLE / MOCK_WEB** modes for repeatable, quota-free, network-free demos and hermetic CI.

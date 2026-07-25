@@ -100,7 +100,7 @@
 // ── Single source of truth. Update `status` fields as work lands. ──────────
 // status: "todo" | "doing" | "done" | "blocked"
 const DATA = {
-  lastUpdated: "2026-07-11 · Direction C shipped across the app + test suite (23 pytest + 3 Playwright E2E, all green) · verification gate now mandatory",
+  lastUpdated: "2026-07-25 · Web-to-pitch foundation: deterministic web-to-doc prospect prep (Plane A) + Zoho product catalog (Plane B) + 6-persona refresh from the persona doc — all no-LLM data prep; pytest + npm build + Playwright 6/6 green",
   phases: [
     { name:"Setup — Runtimes & Environments", owner:"Lead", epics:[
       { id:"ENV", name:"Prerequisites", stories:[
@@ -294,6 +294,52 @@ const DATA = {
       { id:"E36", name:"Verify", stories:[
         { id:"S36.1", desc:"MOCK_WEB; pytest 40/40 + Playwright 5/5 (Freshworks web-only meeting)", owner:"Lead", status:"done" },
         { id:"S36.2", desc:"Live fetch confirmed real news + SEC filings for Freshworks", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 10 — Web-to-Doc Prospect Prep (Plane A · no LLM) · SI-12", owner:"Lead", epics:[
+      { id:"E37", name:"Keyword taxonomy + credibility", stories:[
+        { id:"S37.1", desc:"research_keywords.py — research-guide Section 3 taxonomy (match_categories, search_queries; word-bounded acronyms)", owner:"Lead", status:"done" },
+        { id:"S37.2", desc:"credibility.py — rule-based domain scoring (regulatory/official/press/social); official = whole-name match, no LLM", owner:"Lead", status:"done" },
+      ]},
+      { id:"E38", name:"Keyless retrieval + extraction", stories:[
+        { id:"S38.1", desc:"retrieval.py — DuckDuckGo HTML + Wikipedia search; trafilatura main-text extraction (extract_page pure)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E39", name:"Prep orchestrator + cache + seam", stories:[
+        { id:"S39.1", desc:"prep.py — fetch → keep guide-matched passages → credibility → cached .md + manifest.json (TTL, idempotent)", owner:"Lead", status:"done" },
+        { id:"S39.2", desc:"sources.load_prepared_docs; load_company_intel prefers prepared → feeds → local; tools/prepare.py CLI (--all)", owner:"Lead", status:"done" },
+        { id:"S39.3", desc:"trafilatura==2.1.0 dep; PREP_ENABLED/PREP_MAX_RESULTS/PREP_TTL_HOURS config", owner:"Lead", status:"done" },
+      ]},
+      { id:"E40", name:"Verify + hardening", stories:[
+        { id:"S40.1", desc:"test_prep.py offline (no network, no LLM; a test asserts prep never imports the LLM client)", owner:"Lead", status:"done" },
+        { id:"S40.2", desc:"Fixes: official-domain precision (sleepnumber≠official), word-bounded acronyms, prepared-cache test isolation", owner:"Lead", status:"done" },
+        { id:"S40.3", desc:"Live: 6 target companies prepared (Freshworks 11 docs, incl. official/Wikipedia/SEC/press)", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 11 — Zoho Product Catalog (Plane B · no LLM) · SI-13", owner:"Lead", epics:[
+      { id:"E41", name:"Catalog seed + condenser", stories:[
+        { id:"S41.1", desc:"zoho_catalog.py — 15-source editable seed (help.zoho.com KB is JS → static www.zoho.com pages)", owner:"Lead", status:"done" },
+        { id:"S41.2", desc:"condense.py — deterministic extractive lead_paragraph + key_points (never abstractive, no LLM)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E42", name:"Builder + generated docs", stories:[
+        { id:"S42.1", desc:"build_zoho_catalog.py CLI → docs/zoho/products/*.md + compact zoho_products_summary.md", owner:"Lead", status:"done" },
+        { id:"S42.2", desc:"Summary auto-loads into briefs; products/ subfolder excluded from auto-inject (keeps context short)", owner:"Lead", status:"done" },
+      ]},
+      { id:"E43", name:"Verify", stories:[
+        { id:"S43.1", desc:"test_zoho_catalog.py 4 offline tests; live build 15/15; pytest + build + Playwright green", owner:"Lead", status:"done" },
+      ]},
+    ]},
+    { name:"Phase 12 — Persona Refresh: 6 personas from the persona doc · SI-14", owner:"Lead", epics:[
+      { id:"E44", name:"Contract + generation", stories:[
+        { id:"S44.1", desc:"schemas: Persona enum (sales_rep/sales_manager/enablement/revops/vp_sales/admin) + labels/taglines/sections + DEFAULT_PERSONA", owner:"Lead", status:"done" },
+        { id:"S44.2", desc:"brief_engine: per-persona framing + section guidance for every new section; ALL_PERSONAS derives from enum", owner:"Lead", status:"done" },
+      ]},
+      { id:"E45", name:"Frontend selector & tabs", stories:[
+        { id:"S45.1", desc:"types + lib/persona.ts (one colour per persona); create-dialog selector as 3×2 grid", owner:"Frontend", status:"done" },
+        { id:"S45.2", desc:"Brief-view persona tabs + badges render all 6 (Admin = data-provenance view)", owner:"Frontend", status:"done" },
+      ]},
+      { id:"E46", name:"Migration & verify", stories:[
+        { id:"S46.1", desc:"db.py one-time guarded migration: ae/sdr→sales_rep, se→enablement; drop stale briefs → regenerate; meetings preserved", owner:"Lead", status:"done" },
+        { id:"S46.2", desc:"pytest + build + Playwright 6/6 (toggle sales_rep→sales_manager→vp_sales); migration ran live (4 meetings remapped)", owner:"Lead", status:"done" },
       ]},
     ]},
   ]
