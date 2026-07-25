@@ -181,3 +181,33 @@ def test_calendar_sync_endpoint_reports_clear_error_on_expired_token(client, mon
     r = client.post("/integrations/google/calendar/sync")
     assert r.status_code == 400
     assert "reconnect" in r.json()["detail"].lower() or "revoked" in r.json()["detail"].lower()
+
+
+def test_calendar_sync_removes_meeting_deleted_in_google(client, monkeypatch):
+    # Deleting an event in Google must delete the imported meeting on the next sync.
+    from datetime import datetime, timedelta
+
+    from sqlmodel import Session
+
+    from app import models
+    from app.db import engine
+    from app.services import google_service
+
+    # Import the canned event, and pin its start inside the sync window.
+    _sync(client)
+    m = next(
+        x for x in client.get("/meetings").json()
+        if x.get("google_event_id") == "mock-evt-sleep"
+    )
+    with Session(engine) as s:
+        row = s.get(models.Meeting, m["id"])
+        row.start_time = datetime.utcnow() + timedelta(days=2)
+        s.add(row)
+        s.commit()
+
+    # The rep deletes it in Google → it no longer appears in the calendar listing.
+    monkeypatch.setattr(google_service, "list_events", lambda *a, **k: [])
+    res = _sync(client)
+    assert res["deleted"] >= 1
+    # The meeting (and its briefs) are gone from the app.
+    assert client.get(f"/meetings/{m['id']}").status_code == 404

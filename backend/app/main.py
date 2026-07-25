@@ -43,10 +43,10 @@ def _startup_sync_and_generate() -> None:
 
     try:
         if google.google_service.is_connected():
-            scanned, imported, updated, skipped = google.import_calendar_events()
+            scanned, imported, updated, skipped, deleted = google.import_calendar_events()
             print(
                 f"[startup] calendar sync: scanned {scanned}, imported {imported}, "
-                f"updated {updated}, skipped {skipped}",
+                f"updated {updated}, skipped {skipped}, deleted {deleted}",
                 flush=True,
             )
     except Exception as exc:  # noqa: BLE001 — never block startup

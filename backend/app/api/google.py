@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Tuple
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Query, Response, status
@@ -161,20 +161,27 @@ def _parse_start(s: Optional[str]) -> datetime:
         return datetime.utcnow()
 
 
-def import_calendar_events() -> Tuple[int, int, int, int]:
+# Deletion reconciliation is bounded to the same window list_events() scans, so an
+# imported meeting that's simply out of range is never mistaken for a deleted one.
+_SYNC_DAYS_BACK = 1
+_SYNC_DAYS_AHEAD = 30
+
+
+def import_calendar_events() -> Tuple[int, int, int, int, int]:
     """Reconcile Google Calendar prospect events into meetings. New events are
     imported (primary brief queued 'pending'); events already imported are UPDATED
     in place if the rep edited them in Google (subject/time always; company change
-    also requeues the brief so it rebuilds for the new prospect). Unchanged events
-    are skipped. Brief generation is NOT done here — it is handed to
-    meetings_api.generate_pending_briefs so sync stays fast and generation runs in
-    the background, in meeting-date order.
+    also requeues the brief so it rebuilds for the new prospect); unchanged events
+    are skipped; and a meeting whose Google event was DELETED (no longer returned,
+    within the sync window) is removed here too. Brief generation is NOT done here —
+    it is handed to meetings_api.generate_pending_briefs so sync stays fast.
 
-    Returns (scanned, imported, updated, skipped). Callers (the sync endpoint and the
-    startup pass) trigger generate_pending_briefs after this returns."""
-    events = google_service.list_events()
+    Returns (scanned, imported, updated, skipped, deleted). Callers (the sync endpoint
+    and the startup pass) trigger generate_pending_briefs after this returns."""
+    events = google_service.list_events(_SYNC_DAYS_BACK, _SYNC_DAYS_AHEAD)
     scanned = len(events)
-    imported = updated = skipped = 0
+    live_ids = {e.get("id") for e in events if e.get("id")}
+    imported = updated = skipped = deleted = 0
 
     with Session(engine) as session:
         for e in events:
@@ -225,7 +232,29 @@ def import_calendar_events() -> Tuple[int, int, int, int]:
             session.commit()
             updated += 1
 
-    return scanned, imported, updated, skipped
+        # Deletion reconciliation: a meeting linked to a Google event, whose start_time
+        # is inside the sync window but whose event no longer appears, was deleted in
+        # Google → remove it here too. `list_events` raises on failure (it never returns
+        # a partial/empty list on error), so reaching this point means `live_ids` is
+        # authoritative and it's safe to delete what's missing.
+        now = datetime.utcnow()
+        window_start = now - timedelta(days=_SYNC_DAYS_BACK)
+        window_end = now + timedelta(days=_SYNC_DAYS_AHEAD)
+        linked = session.exec(
+            select(models.Meeting).where(
+                models.Meeting.google_event_id != None,  # noqa: E711 (SQL IS NOT NULL)
+                models.Meeting.start_time >= window_start,
+                models.Meeting.start_time <= window_end,
+            )
+        ).all()
+        for meeting in linked:
+            if meeting.google_event_id not in live_ids:
+                meetings_api.delete_meeting_cascade(session, meeting)
+                deleted += 1
+        if deleted:
+            session.commit()
+
+    return scanned, imported, updated, skipped, deleted
 
 
 def _is_auth_error(exc: Exception) -> bool:
@@ -234,7 +263,7 @@ def _is_auth_error(exc: Exception) -> bool:
     return "invalid_grant" in msg or "expired" in msg or "revoked" in msg
 
 
-def sync_calendar_once() -> Optional[Tuple[int, int, int, int]]:
+def sync_calendar_once() -> Optional[Tuple[int, int, int, int, int]]:
     """One import pass + background-safe brief generation. Fail-soft: returns None on
     any error (e.g. an expired token) instead of raising, so the recurring scheduler
     never dies. Used by both the startup pass and the recurring loop."""
@@ -242,10 +271,12 @@ def sync_calendar_once() -> Optional[Tuple[int, int, int, int]]:
         if not google_service.is_connected():
             return None
         result = import_calendar_events()
-        imported, updated = result[1], result[2]
+        imported, updated, deleted = result[1], result[2], result[4]
         if imported or updated:
             meetings_api.generate_pending_briefs()
-            print(f"[calendar-sync] imported {imported}, updated {updated}", flush=True)
+        if imported or updated or deleted:
+            print(f"[calendar-sync] imported {imported}, updated {updated}, "
+                  f"deleted {deleted}", flush=True)
         return result
     except Exception as exc:  # noqa: BLE001 — a bad token must not kill the loop
         hint = " (token expired/revoked — reconnect Google)" if _is_auth_error(exc) else ""
@@ -270,7 +301,7 @@ def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
         raise HTTPException(status_code=400, detail="Google is not connected.")
 
     try:
-        scanned, imported, updated, skipped = import_calendar_events()
+        scanned, imported, updated, skipped, deleted = import_calendar_events()
     except Exception as exc:  # noqa: BLE001 — surface a clear error, never a raw 500
         if _is_auth_error(exc):
             raise HTTPException(
@@ -284,14 +315,16 @@ def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
         background_tasks.add_task(meetings_api.generate_pending_briefs)
 
     changed = imported + updated
+    deleted_note = f" Removed {deleted} deleted from Google." if deleted else ""
     return CalendarSyncResult(
         imported=imported,
         briefed=changed,
         skipped_existing=skipped,
         scanned=scanned,
+        deleted=deleted,
         message=(
             f"Scanned {scanned} event(s); imported {imported} prospect meeting(s), "
-            f"updated {updated} changed, {skipped} unchanged. "
+            f"updated {updated} changed, {skipped} unchanged." + deleted_note + " "
             + (
                 "Briefs are generating in the background."
                 if changed

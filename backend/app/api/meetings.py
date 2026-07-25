@@ -315,6 +315,21 @@ def get_meeting(
     return meeting
 
 
+def delete_meeting_cascade(session: Session, meeting: models.Meeting) -> None:
+    """Delete a meeting and its briefs + chat messages. Does NOT commit — the caller
+    commits (so callers can delete several in one transaction)."""
+    mid = meeting.id
+    for brief in session.exec(
+        select(models.Brief).where(models.Brief.meeting_id == mid)
+    ).all():
+        session.delete(brief)
+    for msg in session.exec(
+        select(models.ChatMessage).where(models.ChatMessage.meeting_id == mid)
+    ).all():
+        session.delete(msg)
+    session.delete(meeting)
+
+
 @router.delete("/meetings/{meeting_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_meeting(
     meeting_id: int, session: Session = Depends(get_session)
@@ -323,17 +338,7 @@ def delete_meeting(
     if meeting is None:
         raise HTTPException(status_code=404, detail="Meeting not found")
 
-    for brief in session.exec(
-        select(models.Brief).where(models.Brief.meeting_id == meeting_id)
-    ).all():
-        session.delete(brief)
-
-    for msg in session.exec(
-        select(models.ChatMessage).where(models.ChatMessage.meeting_id == meeting_id)
-    ).all():
-        session.delete(msg)
-
-    session.delete(meeting)
+    delete_meeting_cascade(session, meeting)
     session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 

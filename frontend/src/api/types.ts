@@ -186,6 +186,7 @@ export interface CalendarSyncResult {
   briefed: number;
   skipped_existing: number;
   scanned: number;
+  deleted: number;
   message: string;
 }
 

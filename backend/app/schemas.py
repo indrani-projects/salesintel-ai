@@ -301,6 +301,7 @@ class CalendarSyncResult(BaseModel):
     briefed: int = 0                  # of those, matched a prospect → brief queued
     skipped_existing: int = 0         # events already imported (deduped)
     scanned: int = 0                  # total Google events looked at
+    deleted: int = 0                  # meetings removed because their Google event was deleted
     message: str = ""
 
 
