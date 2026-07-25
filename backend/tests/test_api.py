@@ -146,6 +146,16 @@ def test_session_persona_sets_active_and_generates(client):
     client.put("/session/persona", params={"persona": "sales_rep"})
 
 
+def test_login_clears_scout_chat_history(client):
+    m = _create(client)
+    _poll_brief(client, m["id"])
+    client.post(f"/meetings/{m['id']}/chat", json={"question": "Who led their last round?"})
+    assert len(client.get(f"/meetings/{m['id']}/chat").json()) >= 2  # user + assistant
+    # Logging in (set session persona) clears Scout history for a fresh assistant.
+    client.put("/session/persona", params={"persona": "sales_rep"})
+    assert client.get(f"/meetings/{m['id']}/chat").json() == []
+
+
 def test_generate_briefs_for_persona(client):
     # Logging in with a persona queues that persona's briefs across all meetings.
     m = _create(client)

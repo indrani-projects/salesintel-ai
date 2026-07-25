@@ -413,8 +413,12 @@ def set_session_persona(
 ) -> dict:
     """Set the signed-in user's persona (called on login) and queue generation of that
     persona's brief across ALL meetings. From here on, sync/imports use this persona,
-    so no other persona (e.g. the old default Sales Representative) is generated."""
+    so no other persona (e.g. the old default Sales Representative) is generated. Also
+    clears Scout chat history so each login starts with a fresh assistant."""
     set_active_persona(session, persona.value)
+    for msg in session.exec(select(models.ChatMessage)).all():
+        session.delete(msg)
+    session.commit()
     background_tasks.add_task(generate_persona_briefs, persona.value)
     return {"active_persona": persona.value, "queued": True}
 

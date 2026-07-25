@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Lock, Radar, Sparkles, User } from "lucide-react";
 import {
@@ -15,6 +16,7 @@ import { useAuth } from "../lib/auth";
 export function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
   const [persona, setPersona] = useState<Persona>("sales_rep");
@@ -27,8 +29,10 @@ export function LoginPage() {
     setSubmitting(true);
     const who = name.trim() || "Guest";
     login({ name: who, persona });
-    // Fire-and-forget: record the active persona server-side and kick off generation of
-    // its briefs so they're ready as the user browses. Never blocks entering the app.
+    // Fresh session: drop any cached Scout chat so the cleared history shows immediately.
+    queryClient.removeQueries({ queryKey: ["chat"] });
+    // Fire-and-forget: record the active persona server-side (this also clears Scout
+    // history on the backend) and kick off generation of its briefs. Never blocks entry.
     setSessionPersona(persona).catch(() => {
       /* best-effort */
     });
