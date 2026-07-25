@@ -21,9 +21,12 @@ export function CalendarPage() {
   const { data: meetings = [] } = useQuery({
     queryKey: ["meetings"],
     queryFn: listMeetings,
+    // Poll fast (4s) while a brief is generating; otherwise keep a slower idle poll
+    // (15s) so meetings the background Google-sync imports appear without a manual
+    // refresh. (Never stops — matches the recurring backend calendar sync.)
     refetchInterval: (query) => {
       const list = (query.state.data as MeetingRead[] | undefined) ?? [];
-      return list.some((m) => isActiveStatus(m.brief_status)) ? 4000 : false;
+      return list.some((m) => isActiveStatus(m.brief_status)) ? 4000 : 15000;
     },
   });
 
