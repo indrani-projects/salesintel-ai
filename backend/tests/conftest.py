@@ -33,6 +33,18 @@ import pytest
 from fastapi.testclient import TestClient
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_prepared_cache(tmp_path_factory):
+    """Point the prepared-docs cache at an empty temp dir so a real
+    backend/.cache/prepared/<slug>/ (left by a live `prepare` run) can't leak into
+    tests and change load_company_intel's source preference. test_prep.py monkeypatches
+    this per-test on top of the empty root."""
+    from app.services import prep
+
+    prep.PREPARED_ROOT = tmp_path_factory.mktemp("prepared_empty")
+    yield
+
+
 @pytest.fixture(scope="session")
 def client():
     from app.main import app

@@ -88,10 +88,18 @@ def match_categories(
     hits: List[str] = []
     for category, terms in CATEGORIES.items():
         for term in terms:
-            if any(n in low for n in _expand_term(term, company, competitors or [])):
+            if any(_needle_in(n, low) for n in _expand_term(term, company, competitors or [])):
                 hits.append(category)
                 break
     return hits
+
+
+def _needle_in(needle: str, low: str) -> bool:
+    """Substring match, but word-bounded for short acronyms so 'arr'/'nrr'/'eps'/'cfo'
+    don't match inside unrelated words (e.g. 'arr' in 'warranty')."""
+    if len(needle) <= 4 and " " not in needle:
+        return re.search(rf"(?<![a-z0-9]){re.escape(needle)}(?![a-z0-9])", low) is not None
+    return needle in low
 
 
 def search_queries(company: str, competitors: Optional[List[str]] = None) -> List[str]:

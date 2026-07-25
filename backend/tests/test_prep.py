@@ -49,6 +49,12 @@ def test_match_categories_tags_and_drops():
     assert rk.match_categories("the weather is pleasant today") == []
 
 
+def test_short_acronyms_are_word_bounded():
+    # 'arr' must match as a standalone metric, not inside 'warranty'/'narrow'.
+    assert "financial_intel" in rk.match_categories("ARR grew 30% year over year")
+    assert rk.match_categories("our warranty covers narrow mattress edges") == []
+
+
 def test_search_queries_include_company_and_signals():
     qs = rk.search_queries("Freshworks", ["Salesforce"])
     assert "Freshworks" in qs
@@ -68,6 +74,13 @@ def test_credibility_tiers():
     assert credibility.score("https://some-random-site.io/post", "Freshworks")[1] == "web"
     assert credibility.is_authoritative("encyclopedia")
     assert not credibility.is_authoritative("social")
+
+
+def test_official_domain_requires_full_name_not_loose_token():
+    # The real brand's site is official...
+    assert credibility.score("https://thesleepcompany.in/mattress", "The Sleep Company")[1] == "official"
+    # ...but an unrelated company sharing one generic word is NOT (was a false 90/official).
+    assert credibility.score("https://ir.sleepnumber.com/quarterly", "The Sleep Company")[1] != "official"
 
 
 # --------------------------------------------------------------------------- #

@@ -39,8 +39,22 @@ def _registrable(host: str) -> str:
     return ".".join(parts[-2:]) if len(parts) >= 2 else host
 
 
-def _company_tokens(company: str) -> list[str]:
-    return [t for t in re.split(r"[^a-z0-9]+", (company or "").lower()) if len(t) >= 4]
+def _compact_name(company: str) -> str:
+    """Company name -> comparable domain form: lowercase, drop leading 'the', alnum only.
+    'The Sleep Company' -> 'sleepcompany'; 'Sprout Social' -> 'sproutsocial'."""
+    name = re.sub(r"^the\s+", "", (company or "").strip().lower())
+    return re.sub(r"[^a-z0-9]", "", name)
+
+
+def _is_official_domain(reg: str, company: str) -> bool:
+    """True only when the domain's primary label matches the whole compacted company
+    name — so 'thesleepcompany.in' is official for The Sleep Company, but the unrelated
+    'sleepnumber.com' is NOT (a loose 'sleep' token match would wrongly claim it)."""
+    compact = _compact_name(company)
+    if len(compact) < 5:
+        return False
+    label = reg.split(".")[0]  # 'sleepnumber' from 'sleepnumber.com'
+    return compact in label or label in compact
 
 
 def score(url: str, company: Optional[str] = None) -> Tuple[int, str]:
@@ -60,10 +74,9 @@ def score(url: str, company: Optional[str] = None) -> Tuple[int, str]:
     if reg == "wikipedia.org":
         return 85, "encyclopedia"
 
-    # Official company domain (host contains a distinctive company token).
-    for tok in _company_tokens(company or ""):
-        if tok in host:
-            return 90, "official"
+    # Official company domain (primary label matches the whole company name).
+    if company and _is_official_domain(reg, company):
+        return 90, "official"
 
     # Tier-1 press / primary wires.
     if reg in _TIER1_PRESS:
