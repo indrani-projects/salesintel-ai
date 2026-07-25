@@ -82,12 +82,10 @@ class Settings(BaseSettings):
     # Master switch — off in tests/E2E so the on-ready hook and the reminder daemon
     # can't interfere with deterministic assertions.
     auto_email_enabled: bool = True
-    reminder_lead_minutes: int = 60   # send the reminder this long before start_time
+    # The (persona) brief is emailed once the brief is ready, and again when the meeting
+    # is within reminder_lead_minutes of its start (default 60 — i.e. in about an hour).
+    reminder_lead_minutes: int = 60   # send the pre-meeting email this long before start
     reminder_poll_seconds: int = 60   # how often the reminder scheduler wakes up
-    # Additionally email the (persona) brief ~1 day before the meeting, once the brief
-    # is ready. Fires when the meeting enters the day-before window; guarded per meeting.
-    day_before_email_enabled: bool = True
-    day_before_lead_minutes: int = 1440   # 24h before start_time
     # Per-persona recipient override: persona key -> email address. Set as JSON in .env:
     #   PERSONA_EMAILS='{"sales_rep":"rohan@acme.com","vp_sales":"vp@acme.com"}'
     # A meeting's auto-emails go to ITS persona's address here; else default_recipient.

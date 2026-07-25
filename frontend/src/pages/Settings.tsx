@@ -183,8 +183,8 @@ export function SettingsPage() {
             <div>
               <h2 className="text-base font-semibold text-ink-900">Automated emails</h2>
               <p className="mt-0.5 max-w-md text-[13px] text-muted">
-                Each brief is emailed automatically when it's ready, ~1 day before, and
-                shortly before the meeting.
+                Each brief is emailed automatically when it's ready, and again about an
+                hour before the meeting.
               </p>
             </div>
           </div>
@@ -210,18 +210,10 @@ export function SettingsPage() {
               <CheckCircle2 className="h-4 w-4 text-good" />
               On ready: the brief is sent as soon as it's generated.
             </div>
-            {automation.day_before_enabled && (
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-brand-700" />
-                Day before: the brief is sent ~
-                <b className="font-semibold">{Math.round(automation.day_before_minutes / 60)}h</b>{" "}
-                before the meeting.
-              </div>
-            )}
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-brand-700" />
-              Reminder: <b className="font-semibold">{automation.lead_minutes} min</b> before
-              the meeting start time.
+              Before the meeting: the brief is sent when it's within{" "}
+              <b className="font-semibold">{automation.lead_minutes} min</b> of the start time.
             </div>
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted" />

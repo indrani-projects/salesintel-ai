@@ -30,11 +30,9 @@ class Meeting(SQLModel, table=True):
     google_event_id: Optional[str] = Field(default=None, index=True)
     google_html_link: Optional[str] = None
     # Automated-email guards: when set, that email has already gone out for this
-    # meeting (idempotency for the on-ready send, the 1-day-before send, and the
-    # 1-hour reminder).
+    # meeting (idempotency for the on-ready send and the 1-hour pre-meeting send).
     ready_email_sent_at: Optional[datetime] = None
     reminder_sent_at: Optional[datetime] = None
-    day_before_sent_at: Optional[datetime] = None
 
 
 class Brief(SQLModel, table=True):

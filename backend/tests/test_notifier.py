@@ -35,7 +35,6 @@ def _make_ready_meeting(client, start_time: datetime) -> int:
         m.start_time = start_time
         m.ready_email_sent_at = None
         m.reminder_sent_at = None
-        m.day_before_sent_at = None
         s.add(m)
         s.commit()
     return mid
@@ -116,41 +115,12 @@ def test_gmail_transport_when_connected(client, monkeypatch):
 
 def test_automation_endpoint_shape(client):
     j = client.get("/integrations/email/automation").json()
-    assert set(j) == {
-        "enabled", "lead_minutes", "recipient", "transport",
-        "day_before_enabled", "day_before_minutes", "personalized",
-    }
+    assert set(j) == {"enabled", "lead_minutes", "recipient", "transport", "personalized"}
     assert j["enabled"] is False           # AUTO_EMAIL_ENABLED=0 in tests
     assert j["lead_minutes"] == 60
     assert j["recipient"] == "rep@salesintel.test"
     assert j["transport"] in {"gmail", "smtp", "demo"}
-    assert j["day_before_minutes"] == 1440
     assert j["personalized"] is False      # no PERSONA_EMAILS in tests
-
-
-def test_day_before_sends_within_window_and_is_idempotent(client):
-    # ~12h out → inside the 24h day-before window.
-    mid = _make_ready_meeting(client, datetime.utcnow() + timedelta(hours=12))
-    sent = notifier.send_due_day_before()
-    assert sent >= 1
-    first = _meeting(mid).day_before_sent_at
-    assert first is not None
-    # Second pass is a no-op — the guard is set.
-    notifier.send_due_day_before()
-    assert _meeting(mid).day_before_sent_at == first
-
-
-def test_day_before_skips_outside_window(client):
-    mid = _make_ready_meeting(client, datetime.utcnow() + timedelta(days=3))  # >24h
-    notifier.send_due_day_before()
-    assert _meeting(mid).day_before_sent_at is None
-
-
-def test_ready_within_day_before_window_also_stamps_day_before(client):
-    # A meeting created <24h out: the on-ready send doubles as the day-before send.
-    mid = _make_ready_meeting(client, datetime.utcnow() + timedelta(hours=6))
-    notifier.send_ready_email(mid)
-    assert _meeting(mid).day_before_sent_at is not None
 
 
 def test_persona_email_routing_falls_back_to_default(monkeypatch):
@@ -162,7 +132,7 @@ def test_persona_email_routing_falls_back_to_default(monkeypatch):
     assert settings.recipient_for_persona("vp_sales") == settings.default_recipient
 
 
-def test_day_before_routes_to_persona_email(client, monkeypatch):
+def test_reminder_routes_to_persona_email(client, monkeypatch):
     from app.config import settings
     from app.services import email_service
 
@@ -175,8 +145,9 @@ def test_day_before_routes_to_persona_email(client, monkeypatch):
         return orig(composed, recipient)
 
     monkeypatch.setattr(email_service, "send_brief_email", _spy)
-    _make_ready_meeting(client, datetime.utcnow() + timedelta(hours=12))
-    notifier.send_due_day_before()
+    # ~30 min out → inside the 1-hour window, so the pre-meeting email fires.
+    _make_ready_meeting(client, datetime.utcnow() + timedelta(minutes=30))
+    notifier.send_due_reminders()
     # The sales_rep meeting routed to its persona address (other due meetings, if any,
     # go to the default — we only assert our persona routing landed).
     assert "rohan@acme.com" in captured

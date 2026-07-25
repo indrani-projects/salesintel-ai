@@ -281,8 +281,6 @@ class EmailAutomationStatus(BaseModel):
     lead_minutes: int = 60           # reminder fires this long before start_time
     recipient: str = ""              # default_recipient (blank ⇒ auto-send skipped)
     transport: str = "demo"          # "gmail" | "smtp" | "demo" — how a send delivers
-    day_before_enabled: bool = False  # also send the brief ~this long before the meeting
-    day_before_minutes: int = 1440    # day-before window (default 24h)
     personalized: bool = False        # True ⇒ some personas have their own recipient email
 
 
