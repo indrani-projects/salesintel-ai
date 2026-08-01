@@ -10,3 +10,7 @@
 deploy/Caddyfile text eol=lf
 deploy/*.service text eol=lf
 deploy/env.production.example text eol=lf
+
+# GitHub Actions runs the `run:` blocks in bash on a Linux runner — CRLF would put
+# a trailing "\r" on every scripted command. Keep workflow files LF-only.
+.github/workflows/*.yml text eol=lf
