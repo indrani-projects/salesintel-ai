@@ -1,0 +1,22 @@
+# SalesIntel AI — public entrypoint. Caddy terminates HTTPS (auto Let's Encrypt),
+# serves the built React SPA, and reverse-proxies the API to uvicorn on localhost.
+# deploy.sh renders __SITE_HOST__ into the real hostname before installing this to
+# /etc/caddy/Caddyfile.
+__SITE_HOST__ {
+	encode zstd gzip
+
+	# API + OAuth callback: strip the /api prefix, forward to the backend, which
+	# binds 127.0.0.1 only (never exposed directly). e.g. Google calls
+	#   https://__SITE_HOST__/api/auth/google/callback  ->  uvicorn /auth/google/callback
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	# Everything else: the static SPA. try_files falls back to index.html so a hard
+	# refresh on a client-side route (/calendar, /brief/123, …) still loads the app.
+	handle {
+		root * /var/www/salesintel
+		try_files {path} /index.html
+		file_server
+	}
+}

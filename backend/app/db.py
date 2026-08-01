@@ -3,7 +3,7 @@ Database engine + session management (SQLite via SQLModel).
 """
 from __future__ import annotations
 
-from sqlalchemy import text
+from sqlalchemy import event, text
 from sqlmodel import Session, SQLModel, create_engine
 
 from app.config import settings
@@ -12,6 +12,23 @@ engine = create_engine(
     settings.database_url,
     connect_args={"check_same_thread": False},
 )
+
+
+# SQLite pragmas, applied on every new connection. WAL (write-ahead logging) lets
+# the request path READ while the background daemons (30s calendar sync + the
+# pre-meeting reminder loop) WRITE, so overlapping access no longer trips
+# "database is locked"; synchronous=NORMAL is the safe, fast pairing for WAL.
+# journal_mode=WAL persists in the file header; re-issuing it per connection is a
+# harmless no-op (and a no-op on :memory: DBs). Guarded to sqlite so pointing
+# database_url at another engine later stays clean.
+if engine.dialect.name == "sqlite":
+
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _record) -> None:  # noqa: ANN001
+        cur = dbapi_conn.cursor()
+        cur.execute("PRAGMA journal_mode=WAL")
+        cur.execute("PRAGMA synchronous=NORMAL")
+        cur.close()
 
 # Columns added to existing tables after first release. create_all() only CREATEs
 # new tables/columns on fresh DBs — it never ALTERs an existing table — so we add

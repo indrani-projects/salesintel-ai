@@ -1,0 +1,30 @@
+# systemd unit for the SalesIntel AI backend (FastAPI/uvicorn).
+# Installed to /etc/systemd/system/salesintel.service by deploy.sh.
+# Runs as the non-root `salesintel` user, binds localhost only, and restarts on
+# failure. The two background daemons (calendar sync + reminder email) live inside
+# this process (see app/main.py on_startup), so keeping it up keeps them running.
+[Unit]
+Description=SalesIntel AI backend (FastAPI/uvicorn)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=salesintel
+Group=salesintel
+WorkingDirectory=/opt/salesintel/backend
+EnvironmentFile=/etc/salesintel/env
+ExecStart=/opt/salesintel/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+
+# --- hardening ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+# DB + WAL sidecars live here and must stay writable:
+ReadWritePaths=/var/lib/salesintel /opt/salesintel
+
+[Install]
+WantedBy=multi-user.target
