@@ -12,11 +12,13 @@ __SITE_HOST__ {
 		reverse_proxy 127.0.0.1:8000
 	}
 
-	# Everything else: the static SPA. try_files falls back to index.html so a hard
-	# refresh on a client-side route (/calendar, /brief/123, …) still loads the app.
+	# Everything else: static files first, then the SPA. try_files resolves a real
+	# file (e.g. /library/runbook.html), then a directory index (/library/ →
+	# /library/index.html), and finally falls back to index.html so a hard refresh
+	# on a client-side route (/calendar, /brief/123, …) still loads the app.
 	handle {
 		root * /var/www/salesintel
-		try_files {path} /index.html
+		try_files {path} {path}/index.html /index.html
 		file_server
 	}
 }
