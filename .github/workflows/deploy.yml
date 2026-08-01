@@ -1,0 +1,98 @@
+name: Deploy to VM
+
+# Continuous deploy: every push to main (i.e. when a PR merges) builds the frontend
+# on the runner and ships the app to the GCP Always-Free VM over the IAP tunnel — the
+# same steps as deploy/README.md, automated. SSH stays closed to the internet; the
+# runner reaches the box only through Google's Identity-Aware Proxy.
+#
+# One-time setup (service account + the four repo variables + the GCP_SA_KEY secret)
+# is documented in deploy/GITHUB_ACTIONS.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # allow a manual "Run workflow" from the Actions tab
+
+# Never let two deploys touch the VM at once; queue instead of cancelling so a
+# half-applied deploy can't happen.
+concurrency:
+  group: deploy-vm
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # Build the SPA on the runner (VITE_API_URL=/api via frontend/.env.production),
+      # so the 1 GB VM never runs a memory-hungry npm build.
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      # A single reusable prefix: project + zone + IAP tunnel for every gcloud call.
+      - name: Deploy over the IAP tunnel
+        env:
+          PROJECT: ${{ vars.GCP_PROJECT }}
+          ZONE: ${{ vars.GCP_ZONE }}
+          VM: ${{ vars.VM_NAME }}
+          SITE_HOST: ${{ vars.SITE_HOST }}
+        run: |
+          set -euo pipefail
+          gcloud config set project "$PROJECT"
+
+          # --quiet keeps every gcloud/ssh call non-interactive on the runner.
+          echo "==> stage a clean payload dir on the VM"
+          gcloud compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --quiet \
+            --command 'rm -rf /tmp/ci-payload && mkdir -p /tmp/ci-payload'
+
+          echo "==> upload backend, docs, deploy, and the built frontend"
+          gcloud compute scp --recurse --tunnel-through-iap --zone "$ZONE" --quiet \
+            backend docs deploy frontend/dist \
+            "$VM":/tmp/ci-payload/
+
+          echo "==> place payload + run the existing deploy.sh"
+          # rsync each piece into /opt/salesintel. --delete removes stale files, but
+          # backend keeps its venv and the git-ignored research cache (both live only
+          # on the VM). The DB is untouched — it lives in /var/lib/salesintel.
+          gcloud compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --quiet \
+            --command "set -euo pipefail
+              sudo mkdir -p /opt/salesintel/frontend
+              sudo rsync -a --delete --exclude '.venv' --exclude '.cache' /tmp/ci-payload/backend/ /opt/salesintel/backend/
+              sudo rsync -a --delete /tmp/ci-payload/docs/   /opt/salesintel/docs/
+              sudo rsync -a --delete /tmp/ci-payload/deploy/ /opt/salesintel/deploy/
+              sudo rsync -a --delete /tmp/ci-payload/dist/   /opt/salesintel/frontend/dist/
+              rm -rf /tmp/ci-payload
+              SITE_HOST='$SITE_HOST' sudo -E bash /opt/salesintel/deploy/deploy.sh"
+
+      - name: Verify the live health endpoint
+        env:
+          SITE_HOST: ${{ vars.SITE_HOST }}
+        run: |
+          set -euo pipefail
+          for i in 1 2 3 4 5; do
+            if curl -fsS "https://$SITE_HOST/api/health" >/dev/null; then
+              echo "healthy: https://$SITE_HOST/api/health"
+              exit 0
+            fi
+            echo "health not ready yet (attempt $i)…"; sleep 5
+          done
+          echo "::error::health check failed after deploy"; exit 1

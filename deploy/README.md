@@ -23,6 +23,7 @@ serverless/spin-down free tiers).
 | `Caddyfile` | Static SPA + `/api/*` reverse proxy; `__SITE_HOST__` is rendered by `deploy.sh`. |
 | `env.production.example` | Template for `/etc/salesintel/env` (real secrets; never committed). |
 | `backup.sh` | Daily tarball of the DB (+ WAL sidecars) and prepared research cache. |
+| `GITHUB_ACTIONS.md` | Continuous deploy: auto-redeploy on merge to `main` via GitHub Actions + IAP. |
 
 ## What lives where on the VM
 - Code payload: `/opt/salesintel/` (`backend/`, `docs/`, `frontend/dist/`, `backend/.cache/`)
@@ -84,6 +85,13 @@ HTTPS, and `systemctl status salesintel caddy` are both active. Then connect Goo
 the live Settings page (only whitelisted OAuth test users can log in).
 
 ## Redeploying after a code change
+
+**Automatic (preferred):** merging a PR into `main` triggers the **Deploy to VM** GitHub
+Actions workflow, which runs exactly these steps for you over the IAP tunnel. See
+[`GITHUB_ACTIONS.md`](./GITHUB_ACTIONS.md) for the one-time setup and how to trigger a
+manual run.
+
+**Manual (fallback):**
 ```bash
 cd frontend && npm run build && cd ..
 # re-run step 2 (upload) then:

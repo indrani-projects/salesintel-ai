@@ -45,6 +45,10 @@ share.config
 # Google OAuth client-secret JSON (the "Download JSON" from Google Cloud) — NEVER commit
 client_secret_*.json
 
+# GCP service-account keys for CI deploy (see deploy/GITHUB_ACTIONS.md) — NEVER commit
+*-key.json
+gha-*.json
+
 # OS / editor
 .DS_Store
 Thumbs.db
