@@ -287,6 +287,31 @@ remaps legacy rows and regenerates stale briefs.
 `PREP_ENABLED`, `PREP_MAX_RESULTS`, `PREP_TTL_HOURS` (prepared-doc cache). Dependency added:
 `trafilatura`.
 
+### Free cloud hosting on GCP (SI-18, `18-gcp-hosting`; PR #21)
+
+The app is now hosted **permanently and free** at **https://salesintel-ai.duckdns.org** on a
+**GCP Compute Engine `e2-micro` "Always Free" VM**. That host was chosen because the two
+background daemons (30s calendar sync + the 1-hour-before reminder email) and the SQLite file
+both need an always-on box with a real disk — which rules out spin-down/serverless free tiers
+(Render, Cloud Run, Vercel) that would kill the daemons and wipe the DB. Kubernetes/GKE was
+rejected (paid nodes, needless complexity).
+
+**Caddy** terminates HTTPS (automatic Let's Encrypt), serves the built React SPA, and
+reverse-proxies `/api/*` to `uvicorn` on `127.0.0.1:8000` (systemd `salesintel.service`, run as
+a non-root user). One origin means the frontend calls the API **same-origin** via
+`frontend/.env.production` (`VITE_API_URL=/api`) — no CORS, one clean OAuth redirect domain.
+SQLite runs in **WAL mode** (`db.py`: `journal_mode=WAL` + `synchronous=NORMAL`) on a persistent
+disk **outside the deploy dir** so redeploys never clobber it.
+
+**Security posture:** backend bound to `127.0.0.1` only; **SSH via Google IAP tunnel only** (no
+public port 22); Shielded VM; secrets in `/etc/salesintel/env` (chmod 600, never committed — only
+`env.production.example` is in git); `unattended-upgrades`; a budget alert; and the OAuth consent
+screen stays in **Testing** mode (only whitelisted test users can log in — hosting gives
+persistence, not public sign-up). The whole flow is scripted under **`deploy/`** (`bootstrap.sh`,
+`deploy.sh`, `salesintel.service`, `Caddyfile`, `backup.sh`, `README.md`) so a redeploy is one
+command; a daily cron backs up the DB (+ WAL sidecars) and the research cache. See **RUNBOOK §11**
+and `deploy/README.md`.
+
 > **Next (not yet built):** Phase 2 of the engine — the LLM analysis stages that *join*
 > Plane A × Plane B into verified pain→product recommendations (descriptive + inferential +
 > adversarial verification).

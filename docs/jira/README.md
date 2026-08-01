@@ -1,7 +1,7 @@
 # SalesIntel AI — MVP 1 Jira Backlog (demo pack)
 
 This folder is a **paste-ready Jira backlog** for the SalesIntel AI POC. It re-frames
-everything that was actually built into **17 product epics and 75 stories**, so a PM can
+everything that was actually built into **18 product epics and 81 stories**, so a PM can
 copy each file straight into Jira (Epic → Stories) with no translation.
 
 > **What this is:** a back-fill of already-delivered work into a clean, capability-shaped
@@ -39,6 +39,7 @@ copy each file straight into Jira (Epic → Stories) with no translation.
 | **SI-15** | Recurring Google Calendar Auto-Sync (+ token expiry, deletion, live UI) | `15-calendar-autosync/` | 4 | High |
 | **SI-16** | Scheduled 1-Hour-Before Persona Email (+ per-persona routing) | `16-hour-before-email/` | 3 | High |
 | **SI-17** | Demo Login & Persona Selection (single active persona) | `17-demo-login/` | 6 | Medium |
+| **SI-18** | Free Cloud Hosting on GCP (Always-Free VM + Caddy HTTPS) | `18-gcp-hosting/` | 6 | High |
 
 ## The product in one paragraph
 
@@ -50,7 +51,9 @@ for **six personas** (Sales Representative, Sales Manager, Sales Enablement, Rev
 Manager, VP of Sales, SalesIntel AI Admin — SI-14), delivered on screen and by email. Under it,
 a **two-plane, no-LLM data foundation** reads the open web about a prospect into
 keyword-filtered, credibility-scored cached docs (**Plane A**, SI-12) and joins it against a
-deterministic **Zoho product catalog** (**Plane B**, SI-13).
+deterministic **Zoho product catalog** (**Plane B**, SI-13). The whole app is now hosted
+**permanently and free** on a **GCP Always-Free `e2-micro` VM** behind Caddy (automatic HTTPS)
+at **https://salesintel-ai.duckdns.org** (**SI-18**).
 
 ## Deliberate POC shortcuts (intentional — noted in the relevant stories)
 

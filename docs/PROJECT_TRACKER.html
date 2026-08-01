@@ -383,6 +383,18 @@ const DATA = {
         { id:"S53.2", desc:"docs/HOW_IT_WORKS.html — plain-English explainer (tech stack, two planes, data journey, brief); pytest · build · Playwright 7/7", owner:"Lead", status:"done" },
       ]},
     ]},
+    { name:"Phase 17 — Free Cloud Hosting on GCP · SI-18", owner:"Lead", epics:[
+      { id:"E54", name:"Same-origin build + WAL + deploy toolkit", stories:[
+        { id:"S54.1", desc:"frontend/.env.production VITE_API_URL=/api — built app calls API same-origin behind Caddy; one URL, no CORS, clean OAuth redirect", owner:"Lead", status:"done" },
+        { id:"S54.2", desc:"SQLite WAL mode (db.py: journal_mode=WAL + synchronous=NORMAL); DB on persistent disk /var/lib/salesintel, outside the deploy dir", owner:"Lead", status:"done" },
+        { id:"S54.3", desc:"deploy/ toolkit: bootstrap.sh, deploy.sh, salesintel.service (non-root, localhost-bound uvicorn), Caddyfile (/api/* proxy), env.production.example, backup.sh, README", owner:"Lead", status:"done" },
+      ]},
+      { id:"E55", name:"Provision Always-Free VM + go live (HTTPS + OAuth)", stories:[
+        { id:"S55.1", desc:"GCP e2-micro Always-Free VM (us-central1, Ubuntu 24.04), reserved static IP, firewall 80/443, SSH via IAP tunnel only, Shielded VM, budget alert", owner:"Lead", status:"done" },
+        { id:"S55.2", desc:"Caddy auto-HTTPS (Let's Encrypt) on DuckDNS host; prod redirect URI + test users on the OAuth client; live at https://salesintel-ai.duckdns.org", owner:"Lead", status:"done" },
+        { id:"S55.3", desc:"Verified live — /api/health ok, meeting → Gemini brief, Google connected, daemons up, daily backup cron; shipped as PR #21", owner:"Lead", status:"done" },
+      ]},
+    ]},
   ]
 };
 
