@@ -426,3 +426,54 @@ gh pr create --base main --head feat/<slug> --title "..." --body "..."
 > that ran `bootstrap`. They do **not** stop edits made through the GitHub website or
 > API; blocking those requires server-side branch protection / rulesets (a paid or
 > public-repo feature). Full spec: `.claude/skills/git-workflow/SKILL.md`.
+
+## 11. Hosting — live free deployment on GCP
+
+The app is hosted **permanently and free** at **https://salesintel-ai.duckdns.org** on a
+**GCP Compute Engine `e2-micro` "Always Free" VM**, behind **Caddy** (automatic HTTPS via
+Let's Encrypt). Caddy serves the built React SPA and reverse-proxies `/api/*` to `uvicorn` on
+`127.0.0.1:8000` (systemd `salesintel.service`, run as a non-root user). SQLite runs in **WAL
+mode** on a persistent disk at `/var/lib/salesintel/` — **outside** the deploy dir, so a
+redeploy never touches your data. The two background daemons (calendar sync + reminder email)
+run inside the service. **This host was chosen because those always-on daemons + the SQLite file
+need a real always-on disk, which serverless/spin-down free tiers don't provide.**
+
+**Full deployment runbook:** `deploy/README.md` (VM create, firewall, bootstrap, env, HTTPS,
+backups, first-time deploy + redeploy).
+
+### Redeploy after a code change
+From your machine (with `gcloud` authenticated to the hosting project):
+```bash
+cd frontend && npm run build && cd ..
+# re-tar backend + docs + deploy + frontend/dist + backend/.cache, scp it to the VM, then on the VM:
+#   SITE_HOST=salesintel-ai.duckdns.org sudo -E bash /opt/salesintel/deploy/deploy.sh
+```
+The database is untouched (it lives in `/var/lib/salesintel`, outside the deploy dir).
+
+### Ops on the VM (SSH is via Google IAP tunnel only — no public port 22)
+```bash
+gcloud compute ssh salesintel-vm --zone=us-central1-a --tunnel-through-iap
+systemctl status salesintel caddy            # services active?
+journalctl -u salesintel -n 100 --no-pager   # backend logs
+sqlite3 /var/lib/salesintel/salesintel.db 'PRAGMA journal_mode;'   # -> wal
+```
+
+### Security & cost
+Backend bound to `127.0.0.1`; **SSH IAP-only**; Shielded VM; secrets in `/etc/salesintel/env`
+(chmod 600, never committed — only `deploy/env.production.example` is in git); `unattended-upgrades`;
+a budget alert; OAuth consent screen stays in **Testing** mode (only whitelisted test users can log
+in). Stay on the `e2-micro` in `us-central1`/`us-west1`/`us-east1` with a ≤30 GB standard disk to
+remain **$0**. The reserved static IP is free while attached to a running VM — if you ever stop the
+VM long-term, release the IP or it accrues a few cents.
+
+### Production env overrides (vs local `backend/.env`)
+Set in `/etc/salesintel/env` on the VM:
+```
+GOOGLE_REDIRECT_URI=https://salesintel-ai.duckdns.org/api/auth/google/callback
+FRONTEND_URL=https://salesintel-ai.duckdns.org
+CORS_ORIGINS=https://salesintel-ai.duckdns.org
+DATABASE_URL=sqlite:////var/lib/salesintel/salesintel.db
+```
+The OAuth **client** itself stays in its original Google Cloud project — editing its redirect URIs /
+test users is free and needs no billing. The GCP **VM/billing** live under a separate personal
+account. Jira epic **SI-18** (`docs/jira/18-gcp-hosting/`) tracks this work; shipped as **PR #21**.
