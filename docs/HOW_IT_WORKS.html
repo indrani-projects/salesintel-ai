@@ -160,6 +160,14 @@
 
   code { font-family: var(--mono); font-size: .85em; background: var(--surface-2); padding: 1px 6px; border-radius: 5px; color: var(--accent-2); border: 1px solid var(--line); }
 
+  a { color: var(--accent-2); text-decoration: none; border-bottom: 1px solid var(--line); }
+  a:hover { border-bottom-color: var(--accent-2); }
+  .liveband { background: var(--accent-wash); border: 1px solid var(--accent); border-radius: var(--radius); padding: 18px 20px; margin-top: 6px; }
+  .liveband .u { margin: 0; font-family: var(--mono); font-size: 14.5px; color: var(--ink); word-break: break-all; }
+  .liveband .u a { border-bottom: none; }
+  .cta { display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono); font-weight: 700; font-size: 14.5px; color: var(--accent-2); background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 11px 16px; text-decoration: none; margin: 12px 0 0; }
+  .cta:hover { background: var(--surface-2); }
+
   footer.foot { max-width: var(--maxw); margin: 60px auto 0; padding-top: 20px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 13px; font-family: var(--mono); }
 
   @media (max-width: 640px) {
@@ -183,6 +191,37 @@
       <span class="badge">Built on free tiers</span>
     </div>
   </header>
+
+  <section id="use">
+    <p class="kicker">Using the live app</p>
+    <h2>It's live on the web — here's how to sign in.</h2>
+    <p class="lead-in">SalesIntel AI is hosted and always on — no install, no setup. Open it in any browser, sign in, and the briefings for your role are ready.</p>
+    <div class="liveband">
+      <p class="u"><strong>Live address:</strong> <a href="https://salesintel-ai.duckdns.org">https://salesintel-ai.duckdns.org</a></p>
+      <a class="cta" href="https://salesintel-ai.duckdns.org">Open SalesIntel AI &rarr;</a>
+    </div>
+    <div class="pipe" style="margin-top: 14px;">
+      <div class="step"><div class="num">1</div><div>
+        <h4>Open the app &amp; sign in</h4>
+        <p>Go to <a href="https://salesintel-ai.duckdns.org">salesintel-ai.duckdns.org</a>. Enter <strong>your name</strong>, <strong>any password</strong> (it's a demo login — no account to create), and pick <strong>your role</strong> (e.g. Sales Representative, VP of Sales). You land straight in your workspace and briefings for that role start generating.</p>
+      </div></div>
+      <div class="step"><div class="num">2</div><div>
+        <h4>Connect Google once — for your calendar &amp; email</h4>
+        <p>Open <strong>Settings &rarr; Connect Google</strong> and allow calendar + email access. Your Google Calendar meetings then import on their own (a background sync checks every ~30 seconds), and pre-meeting brief emails can be sent for you. <em>Only Google accounts approved as test users can connect.</em></p>
+      </div></div>
+      <div class="step"><div class="num">3</div><div>
+        <h4>Add a meeting</h4>
+        <p>Either add a prospect meeting in your Google Calendar (say, a call with <strong>The Sleep Company</strong>) and let it sync in, or add one on the <strong>Calendar</strong> page. A cited briefing generates by itself, usually within a minute.</p>
+      </div></div>
+      <div class="step"><div class="num">4</div><div>
+        <h4>Read the briefing &amp; ask Scout</h4>
+        <p>Open the meeting to see its one-page, role-shaped briefing — every fact linked to its source. Got a follow-up? Ask <strong>Scout</strong>, the built-in chatbot, which answers only from the briefing's sources.</p>
+      </div></div>
+    </div>
+    <div class="note" style="margin-top: 14px;">
+      <p><strong>Good to know:</strong> the sign-in is a demo — any password works; it simply tailors the workspace to your role. The first time you connect Google you may see a &ldquo;Google hasn't verified this app&rdquo; screen — that's expected for a private test app, so choose <strong>Continue</strong>. The whole thing runs on a free-tier server, so it stays live at no cost.</p>
+    </div>
+  </section>
 
   <section>
     <p class="kicker">The idea in one breath</p>
