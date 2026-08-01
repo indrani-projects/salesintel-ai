@@ -7,6 +7,7 @@ create, the primary persona is generated first, then the other two.
 """
 from __future__ import annotations
 
+import logging
 import threading
 from datetime import datetime
 from typing import List, Optional
@@ -21,6 +22,7 @@ from app.schemas import DEFAULT_PERSONA, CompanyRead, MeetingCreate, MeetingRead
 from app.services import brief_engine, brief_render, sources
 
 router = APIRouter(tags=["meetings"])
+logger = logging.getLogger(__name__)
 
 # Fan-out set — one brief per persona. Derived from the enum so it stays in sync.
 ALL_PERSONAS = [p.value for p in Persona]
@@ -71,8 +73,10 @@ def _run_generation(meeting_id: int, persona: str) -> None:
             if is_primary:
                 meeting.brief_status = "ready"
         except Exception as e:  # noqa: BLE001 — must never crash the server
+            # Full detail to the server log; a generic, non-leaking message to the client.
+            logger.exception("Brief generation failed for meeting %s (%s)", meeting_id, persona)
             brief.status = "error"
-            brief.error = str(e)[:1000]
+            brief.error = "Brief generation failed. Please try regenerating."
             if is_primary:
                 meeting.brief_status = "error"
 
