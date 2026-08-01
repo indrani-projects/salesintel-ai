@@ -3,3 +3,10 @@
 .githooks/* text eol=lf
 *.sh text eol=lf
 *.ps1 text eol=crlf
+
+# Deploy artifacts consumed on the Linux VM — force LF. A CRLF systemd
+# EnvironmentFile would append "\r" to secret values; CRLF in the unit/Caddyfile
+# is likewise unsafe. rsync/scp from Windows then sends LF too.
+deploy/Caddyfile text eol=lf
+deploy/*.service text eol=lf
+deploy/env.production.example text eol=lf
