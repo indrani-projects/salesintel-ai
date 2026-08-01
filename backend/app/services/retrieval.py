@@ -48,6 +48,10 @@ def _domain(url: str) -> str:
     return host[4:] if host.startswith("www.") else host
 
 
+# Public alias so other modules don't import the underscore-private name (C1).
+domain = _domain
+
+
 def _decode_ddg_href(href: str) -> Optional[str]:
     """DuckDuckGo HTML wraps results in /l/?uddg=<encoded-url> redirects."""
     if href.startswith("//"):

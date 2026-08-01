@@ -26,10 +26,11 @@ from app.schemas import (
 from app.services.llm_client import get_client, get_model
 from app.services.sources import (
     COMPANY_NAMES,
-    _display_name,
+    display_name,
     load_company_intel,
     resolve_company_slug,
 )
+from app.services.textutil import strip_fences
 
 _VALID_CONFIDENCE = {c.value for c in Confidence}
 
@@ -281,14 +282,6 @@ def _user_prompt(
     )
 
 
-def _strip_fences(raw: str) -> str:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```[a-zA-Z0-9]*\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-    return raw.strip()
-
-
 def _coerce_confidence(value) -> Confidence:
     if isinstance(value, str) and value.strip().lower() in _VALID_CONFIDENCE:
         return Confidence(value.strip().lower())
@@ -331,7 +324,7 @@ def _parse_brief(
     persona_sections: List[Tuple[str, str]],
     fallback_sources: List[SourceDoc],
 ) -> BriefContent:
-    data = json.loads(_strip_fences(raw))
+    data = json.loads(strip_fences(raw))
     if not isinstance(data, dict):
         raise ValueError("Top-level JSON is not an object")
 
@@ -494,9 +487,9 @@ def generate_brief(
     if company_name:
         company = company_name
     elif slug:
-        company = COMPANY_NAMES.get(slug) or _display_name(slug)
+        company = COMPANY_NAMES.get(slug) or display_name(slug)
     else:
-        company = _display_name(company_slug) if company_slug else "Prospect"
+        company = display_name(company_slug) if company_slug else "Prospect"
     slug = slug or _slugify(company)
     persona_sections = sections_for(persona)
 
