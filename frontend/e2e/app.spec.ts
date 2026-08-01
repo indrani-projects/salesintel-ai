@@ -51,6 +51,28 @@ test("login page signs in with a persona and lands on the app", async ({ page })
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
+test("meeting times are served as explicit UTC (…Z) so the browser converts correctly", async () => {
+  // Regression: the API must tag stored (UTC) datetimes with a Z. A marker-less
+  // string makes the browser read the time as local, shifting every meeting by the
+  // viewer's UTC offset.
+  const ctx = await pwRequest.newContext({ baseURL: API });
+  const created = await ctx.post("/meetings", {
+    data: {
+      subject: "Discovery call with The Sleep Company",
+      prospect_company: "The Sleep Company",
+      start_time: "2026-07-20T10:30:00",
+      persona: "sales_rep",
+    },
+  });
+  expect(created.ok()).toBeTruthy();
+  const m = await created.json();
+  expect(m.start_time).toMatch(/Z$/);
+  expect(m.created_at).toMatch(/Z$/);
+  // 10:30 stored as UTC round-trips to the same instant (no offset applied).
+  expect(new Date(m.start_time).toISOString()).toBe("2026-07-20T10:30:00.000Z");
+  await ctx.dispose();
+});
+
 test("app shell renders with the workspace nav", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByText("SalesIntel AI").first()).toBeVisible();

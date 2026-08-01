@@ -10,11 +10,25 @@ All API request/response bodies are defined here as Pydantic models.
 """
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
+
+
+def _utc_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Serialize a stored datetime as an explicit-UTC ISO string (…Z).
+
+    Every datetime we persist is UTC — `datetime.utcnow()` or a Google time already
+    converted to UTC — but naive, so Pydantic emits it without an offset. A
+    marker-less string makes the browser's `new Date()` read it as *local* time,
+    shifting every displayed meeting by the viewer's UTC offset. Tagging it UTC here
+    lets the frontend convert to the viewer's zone correctly."""
+    if dt is None:
+        return None
+    dt = dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
+    return dt.isoformat().replace("+00:00", "Z")
 
 
 # --------------------------------------------------------------------------- #
@@ -180,6 +194,10 @@ class MeetingRead(BaseModel):
     google_event_id: Optional[str] = None   # set when linked to a Google Calendar event
     google_html_link: Optional[str] = None   # deep-link to the event on Google
 
+    @field_serializer("start_time", "created_at")
+    def _ser_utc(self, dt: datetime) -> Optional[str]:
+        return _utc_iso(dt)
+
 
 # --------------------------------------------------------------------------- #
 # Brief content (the AI-Engine's structured output)
@@ -219,6 +237,10 @@ class BriefContent(BaseModel):
     sources: List[BriefSource]
     generated_at: Optional[datetime] = None
 
+    @field_serializer("generated_at")
+    def _ser_utc(self, dt: Optional[datetime]) -> Optional[str]:
+        return _utc_iso(dt)
+
 
 class BriefRead(BaseModel):
     """What GET /meetings/{id}/brief returns (for a given persona)."""
@@ -249,6 +271,10 @@ class ChatMessageRead(BaseModel):
     role: str                        # "user" | "assistant"
     content: str
     created_at: datetime
+
+    @field_serializer("created_at")
+    def _ser_utc(self, dt: datetime) -> Optional[str]:
+        return _utc_iso(dt)
 
 
 # --------------------------------------------------------------------------- #
