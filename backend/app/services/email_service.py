@@ -12,6 +12,7 @@ No third-party dependency: real send uses the stdlib smtplib + email.message.
 from __future__ import annotations
 
 import html
+import logging
 import re
 import smtplib
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from email.message import EmailMessage
 from typing import List, Tuple
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 from app.schemas import (
     PERSONA_LABELS,
     PERSONA_TAGLINES,
@@ -252,12 +255,13 @@ def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult
                 attachment_maintype=composed.attachment_maintype,
                 attachment_subtype=composed.attachment_subtype,
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception:  # noqa: BLE001
+            logger.exception("Gmail send failed")
             if not use_smtp:  # no fallback available
                 return EmailSendResult(
                     delivered=False, mode="error", recipient=recipient,
                     subject=composed.subject,
-                    message=f"Gmail send failed: {exc}",
+                    message="Could not send the email from Gmail. Please try again.",
                 )
         else:
             delivered = not settings.mock_google
@@ -303,13 +307,14 @@ def send_brief_email(composed: ComposedEmail, recipient: str) -> EmailSendResult
             server.starttls()
             server.login(settings.smtp_user, settings.smtp_password)
             server.send_message(msg)
-    except Exception as exc:  # never crash the request — surface a UI-friendly error
+    except Exception:  # never crash the request — surface a UI-friendly error
+        logger.exception("SMTP send failed")
         return EmailSendResult(
             delivered=False,
             mode="error",
             recipient=recipient,
             subject=composed.subject,
-            message=f"Could not send the email: {exc}",
+            message="Could not send the email. Please try again.",
         )
 
     return EmailSendResult(

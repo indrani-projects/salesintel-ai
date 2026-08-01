@@ -13,7 +13,14 @@ from app.config import settings
 from app.db import init_db
 from app.schemas import HealthResponse
 
-app = FastAPI(title="SalesIntel AI")
+# In production (EXPOSE_DOCS=false) the interactive docs are disabled so the public
+# API surface isn't self-published; local dev keeps them on.
+app = FastAPI(
+    title="SalesIntel AI",
+    docs_url="/docs" if settings.expose_docs else None,
+    redoc_url="/redoc" if settings.expose_docs else None,
+    openapi_url="/openapi.json" if settings.expose_docs else None,
+)
 
 app.add_middleware(
     CORSMiddleware,

@@ -10,7 +10,11 @@ data so tests / Playwright never contact Google.
 from __future__ import annotations
 
 import base64
+import hashlib
+import hmac
 import os
+import secrets
+import time
 from datetime import datetime, timedelta, timezone
 from email.message import EmailMessage
 from typing import List, Optional
@@ -128,6 +132,40 @@ def _build_flow(state: Optional[str] = None):
     return flow
 
 
+# --------------------------------------------------------------------------- #
+# OAuth CSRF state (signed + time-bounded, stateless — no session store needed)
+# --------------------------------------------------------------------------- #
+def _state_secret() -> bytes:
+    """Key for signing the OAuth `state`. Derived from the client secret so it is
+    stable across the separate login and callback requests without a session store;
+    falls back to a fixed dev string when no client secret is configured."""
+    base = (settings.google_client_secret or "salesintel-dev-state").encode()
+    return hashlib.sha256(base).digest()
+
+
+def make_state() -> str:
+    """A signed, timestamped state nonce embedded in the consent URL."""
+    msg = f"{secrets.token_urlsafe(12)}.{int(time.time())}"
+    sig = hmac.new(_state_secret(), msg.encode(), hashlib.sha256).hexdigest()[:32]
+    return f"{msg}.{sig}"
+
+
+def verify_state(state: str, max_age_seconds: int = 600) -> bool:
+    """True iff `state` was minted by make_state() within the last max_age_seconds."""
+    parts = (state or "").split(".")
+    if len(parts) != 3:
+        return False
+    nonce, ts, sig = parts
+    expected = hmac.new(_state_secret(), f"{nonce}.{ts}".encode(), hashlib.sha256).hexdigest()[:32]
+    if not hmac.compare_digest(sig, expected):
+        return False
+    try:
+        age = int(time.time()) - int(ts)
+    except ValueError:
+        return False
+    return 0 <= age <= max_age_seconds
+
+
 def authorization_url() -> str:
     """The Google consent URL to redirect the browser to."""
     flow = _build_flow()
@@ -135,6 +173,7 @@ def authorization_url() -> str:
         access_type="offline",          # get a refresh_token
         include_granted_scopes="true",
         prompt="consent",               # force refresh_token even on re-connect
+        state=make_state(),             # CSRF: validated in the callback
     )
     return url
 
