@@ -5,8 +5,10 @@ name: Deploy to VM
 # same steps as deploy/README.md, automated. SSH stays closed to the internet; the
 # runner reaches the box only through Google's Identity-Aware Proxy.
 #
-# One-time setup (service account + the four repo variables + the GCP_SA_KEY secret)
-# is documented in deploy/GITHUB_ACTIONS.md.
+# Auth is keyless (Workload Identity Federation) — GitHub's OIDC token is federated
+# to the github-deployer service account; no key is stored in GitHub. One-time setup
+# (service account, WIF pool/provider, and the repo variables) is in
+# deploy/GITHUB_ACTIONS.md.
 
 on:
   push:
@@ -18,6 +20,12 @@ on:
 concurrency:
   group: deploy-vm
   cancel-in-progress: false
+
+# Required for keyless auth: the job must be allowed to mint an OIDC token that
+# google-github-actions/auth exchanges for a short-lived GCP access token.
+permissions:
+  id-token: write
+  contents: read
 
 jobs:
   deploy:
@@ -40,10 +48,11 @@ jobs:
           npm ci
           npm run build
 
-      - name: Authenticate to Google Cloud
+      - name: Authenticate to Google Cloud (keyless / WIF)
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
 
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
