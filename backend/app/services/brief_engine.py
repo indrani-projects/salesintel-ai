@@ -1,4 +1,5 @@
-"""Core brief synthesis — persona-aware (AE / SDR / SE).
+"""Core brief synthesis — persona-aware (the six Persona values in schemas.py:
+Sales Rep, Sales Manager, Enablement, RevOps, VP of Sales, Admin).
 
 Loads grounded sources for a prospect, prompts an OpenAI-compatible LLM to produce
 a strict-JSON briefing shaped for the chosen rep persona, then parses and validates
