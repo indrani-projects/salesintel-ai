@@ -145,7 +145,7 @@ def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
     non-alphanumerics -> underscores) so 'Discovery call with Sleep Company'
     still resolves to 'The Sleep Company'."""
     summary = event.get("summary", "") or ""
-    hay = sources._normalize(
+    hay = sources.slugify(
         " ".join(
             [summary, event.get("description", "")]
             + list(event.get("attendees", []))
@@ -154,13 +154,13 @@ def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
 
     # 1) Known company with docs (highest confidence).
     for c in sources.list_companies():
-        key = sources._normalize(c.name)  # "The Sleep Company" -> "sleep_company"
+        key = sources.slugify(c.name)  # "The Sleep Company" -> "sleep_company"
         if key and key in hay:
             return c.slug, c.name
 
     # 2) Enrichment company from the research guide (web-first, no docs folder).
     for name_key, display in _HINT_DISPLAY.items():
-        if sources._normalize(display) in hay:
+        if sources.slugify(display) in hay:
             return None, display
 
     # 3) Generic: extract any company from a sales-meeting-style title. The
@@ -239,7 +239,7 @@ def import_calendar_events() -> Tuple[int, int, int, int, int]:
                 continue
 
             # Already imported — apply any edit the rep made in Google.
-            company_changed = sources._normalize(existing.prospect_company) != sources._normalize(name)
+            company_changed = sources.slugify(existing.prospect_company) != sources.slugify(name)
             subject_changed = (existing.subject or "") != new_subject
             time_changed = existing.start_time != new_start
             if not (company_changed or subject_changed or time_changed):
