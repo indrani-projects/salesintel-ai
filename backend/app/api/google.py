@@ -87,6 +87,9 @@ _MEETING_WORDS = re.compile(
 )
 # "... with <Company>" — capture the company that a meeting is *with*.
 _WITH_RE = re.compile(r"\bwith\s+(.+)$", re.IGNORECASE)
+# Separator between a meeting title and the company, e.g. "Demo Meeting - Apple"
+# or "Introduction: OpenAI" (dash / en-dash / em-dash / colon).
+_SEP_RE = re.compile(r"[-–—:]")
 # Trailing noise to trim off an extracted company name.
 _TRAILING = re.compile(
     r"\s*\b(team|folks|group|call|meeting|sync|demo|about|re|regarding)\b.*$",
@@ -95,16 +98,30 @@ _TRAILING = re.compile(
 
 
 def _extract_company_from_title(summary: str) -> Optional[str]:
-    """Best-effort generic company name from a sales-meeting-style title, e.g.
-    'Discovery call with Acme Corp' -> 'Acme Corp'. Returns None if the title
-    doesn't read like a prospect meeting (keeps personal events out)."""
+    """Best-effort generic company name from a sales-meeting-style title:
+      'Discovery call with Acme Corp' -> 'Acme Corp'   (via "with")
+      'Demo Meeting - Apple'          -> 'Apple'        (via a separator)
+    Returns None if the title doesn't read like a prospect meeting (keeps personal
+    events out)."""
     if not summary or not _MEETING_WORDS.search(summary):
         return None
+
+    # 1) "... with <Company>" — the most explicit form.
     m = _WITH_RE.search(summary)
-    if not m:
-        return None
-    cand = _TRAILING.sub("", m.group(1)).strip(" -–—:,")
-    return cand or None
+    if m:
+        cand = _TRAILING.sub("", m.group(1)).strip(" -–—:,")
+        return cand or None
+
+    # 2) "<meeting title><sep><Company>" — take the text after the LAST separator.
+    #    Require an upper-case start so a hyphenated meeting word ("check-in",
+    #    "kick-off") isn't mistaken for a company ("in", "off"), and reject a tail
+    #    that is itself just a meeting word ("Demo call - Review").
+    if _SEP_RE.search(summary):
+        tail = _SEP_RE.split(summary)[-1].strip(" -–—:,")
+        if tail and tail[0].isupper() and not _MEETING_WORDS.fullmatch(tail):
+            return tail
+
+    return None
 
 
 def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
