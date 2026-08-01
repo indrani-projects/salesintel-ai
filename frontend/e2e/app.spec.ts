@@ -130,6 +130,24 @@ test("settings shows the automated-emails card", async ({ page }) => {
   await page.screenshot({ path: `${SHOTS}/12-settings-automation.png`, fullPage: true });
 });
 
+test("settings shows the Developer Library with doc links", async ({ page, request }) => {
+  await page.goto("/settings");
+  await expect(page.getByRole("heading", { name: "Developer Library" })).toBeVisible();
+  // The four friendly-named docs are linked.
+  for (const name of ["How It Works", "Build Tracker", "Operations Runbook", "Architecture & Build Plan"]) {
+    await expect(page.getByRole("link", { name: new RegExp(name) })).toBeVisible();
+  }
+  // The runbook link points at its generated static page, and that page is served.
+  await expect(page.getByRole("link", { name: /Operations Runbook/ })).toHaveAttribute(
+    "href",
+    "/library/runbook.html",
+  );
+  const res = await request.get("/library/runbook.html");
+  expect(res.status()).toBe(200);
+  expect(await res.text()).toContain("Operations Runbook");
+  await page.screenshot({ path: `${SHOTS}/13-settings-library.png`, fullPage: true });
+});
+
 test("send-as-email composes a persona digest and demo-sends", async ({ page }) => {
   const id = await seedMeeting("sales_rep");
   await page.goto(`/meeting/${id}`);

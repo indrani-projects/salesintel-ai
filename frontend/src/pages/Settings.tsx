@@ -3,14 +3,20 @@ import { useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  ArrowUpRight,
+  BookOpen,
   CalendarCheck,
   CheckCircle2,
   Clock,
+  FileText,
+  Library,
+  ListChecks,
   Loader2,
   Mail,
   RefreshCw,
   Send,
   Unplug,
+  Wrench,
 } from "lucide-react";
 import {
   disconnectGoogle,
@@ -20,6 +26,35 @@ import {
   syncGoogleCalendar,
 } from "../api/client";
 import type { CalendarSyncResult } from "../api/types";
+
+// Developer Library — help/reference docs served as static pages at /library/*
+// (generated at build time by frontend/scripts/build-library.mjs). Open in a new tab.
+const LIBRARY = [
+  {
+    href: "/library/how-it-works.html",
+    title: "How It Works",
+    blurb: "A plain-English tour of the tech and how a briefing is built.",
+    Icon: BookOpen,
+  },
+  {
+    href: "/library/project-tracker.html",
+    title: "Build Tracker",
+    blurb: "Every feature we've shipped, grouped by phase.",
+    Icon: ListChecks,
+  },
+  {
+    href: "/library/runbook.html",
+    title: "Operations Runbook",
+    blurb: "Setup, running, deployment, and troubleshooting.",
+    Icon: Wrench,
+  },
+  {
+    href: "/library/build-plan.html",
+    title: "Architecture & Build Plan",
+    blurb: "The design, tech stack, and product roadmap.",
+    Icon: FileText,
+  },
+];
 
 export function SettingsPage() {
   const qc = useQueryClient();
@@ -234,6 +269,43 @@ export function SettingsPage() {
             </div>
           </div>
         )}
+      </section>
+
+      {/* Developer Library card */}
+      <section className="card mt-5 p-6">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+            <Library className="h-6 w-6" />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold text-ink-900">Developer Library</h2>
+            <p className="mt-0.5 max-w-md text-[13px] text-muted">
+              Guides and reference for how SalesIntel works — the technology, what's
+              shipped, and how it's run and deployed.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-2.5 border-t border-line pt-4 sm:grid-cols-2">
+          {LIBRARY.map(({ href, title, blurb, Icon }) => (
+            <a
+              key={href}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-start gap-3 rounded-xl border border-line p-3.5 transition hover:border-brand-300 hover:bg-brand-50"
+            >
+              <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1 text-sm font-semibold text-ink-900">
+                  {title}
+                  <ArrowUpRight className="h-3.5 w-3.5 text-muted transition group-hover:text-brand-700" />
+                </div>
+                <p className="mt-0.5 text-[12.5px] leading-snug text-muted">{blurb}</p>
+              </div>
+            </a>
+          ))}
+        </div>
       </section>
     </div>
   );
