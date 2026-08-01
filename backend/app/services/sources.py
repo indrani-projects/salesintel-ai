@@ -14,6 +14,7 @@ from app.config import settings
 from app.contracts import SourceDoc
 from app.schemas import CompanyRead
 from app.services.ingestion import extract_text
+from app.services.textutil import MAX_DOC_CHARS
 
 # Extensions we treat as ingestable source documents.
 _DOC_EXTS = {".pdf", ".md", ".txt", ".html", ".htm"}
@@ -21,8 +22,6 @@ _DOC_EXTS = {".pdf", ".md", ".txt", ".html", ".htm"}
 # Folders that are never prospect companies.
 _ZOHO_SLUG = "zoho"
 
-# Per-document text truncation to control token usage / latency.
-_MAX_DOC_CHARS = 8000
 
 # Known slug -> display-name overrides. Other slugs are prettified generically.
 COMPANY_NAMES: dict[str, str] = {
@@ -106,6 +105,10 @@ def slugify(name_or_slug: str) -> str:
     return _normalize(name_or_slug)
 
 
+# Public alias so other modules don't import the underscore-private name (C1).
+display_name = _display_name
+
+
 def resolve_company_slug(name_or_slug: str) -> Optional[str]:
     """Map a free-text company name (or slug) to an existing docs/<slug> folder."""
     if not name_or_slug:
@@ -145,8 +148,8 @@ def _load_folder_docs(
     idx = start_index
     for f in _doc_files(folder):
         text = extract_text(f)
-        if len(text) > _MAX_DOC_CHARS:
-            text = text[:_MAX_DOC_CHARS]
+        if len(text) > MAX_DOC_CHARS:
+            text = text[:MAX_DOC_CHARS]
         docs.append(
             SourceDoc(
                 marker=f"S{idx}",
@@ -204,8 +207,8 @@ def load_prepared_docs(
             text = (cdir / fname).read_text(encoding="utf-8")
         except OSError:
             continue
-        if len(text) > _MAX_DOC_CHARS:
-            text = text[:_MAX_DOC_CHARS]
+        if len(text) > MAX_DOC_CHARS:
+            text = text[:MAX_DOC_CHARS]
         docs.append(
             SourceDoc(
                 marker=f"S{idx}",

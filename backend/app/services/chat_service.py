@@ -19,6 +19,7 @@ from app.schemas import (
 )
 from app.services.llm_client import get_client, get_model
 from app.services.sources import load_company_intel
+from app.services.textutil import MAX_DOC_CHARS, strip_fences
 
 SYSTEM_PROMPT = (
     "You are a grounded pre-sales assistant answering a Zoho sales rep's follow-up "
@@ -29,7 +30,6 @@ SYSTEM_PROMPT = (
 )
 
 # Keep chat context lean relative to brief generation.
-_MAX_DOC_CHARS = 8000
 _MAX_HISTORY = 10
 
 
@@ -44,20 +44,12 @@ def _source_context(sources: List[SourceDoc]) -> str:
     blocks = []
     for s in sources:
         tag = (s.tags[0] if s.tags else "prospect")
-        text = s.text[:_MAX_DOC_CHARS]
+        text = s.text[:MAX_DOC_CHARS]
         blocks.append(
             f"===== SOURCE {s.marker} | tag={tag} | title={s.title} | "
             f"file={s.filename} =====\n{text}"
         )
     return "\n\n".join(blocks)
-
-
-def _strip_fences(raw: str) -> str:
-    raw = raw.strip()
-    if raw.startswith("```"):
-        raw = re.sub(r"^```[a-zA-Z0-9]*\s*", "", raw)
-        raw = re.sub(r"\s*```$", "", raw)
-    return raw.strip()
 
 
 def _referenced_markers(text: str) -> set[str]:
@@ -142,7 +134,7 @@ def answer_question(
     answer_md = ""
     grounded = True
     try:
-        data = json.loads(_strip_fences(raw))
+        data = json.loads(strip_fences(raw))
         if isinstance(data, dict):
             answer_md = str(data.get("answer_md", "") or "")
             grounded = bool(data.get("grounded", True))
@@ -150,7 +142,7 @@ def answer_question(
             answer_md = raw.strip()
     except Exception:
         # Not JSON — treat the raw text as the answer.
-        answer_md = _strip_fences(raw)
+        answer_md = strip_fences(raw)
 
     if not answer_md.strip():
         answer_md = "That isn't covered by the available sources."

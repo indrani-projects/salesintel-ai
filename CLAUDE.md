@@ -34,8 +34,12 @@ npm run build      # tsc -b && vite build
 npm run lint       # oxlint
 ```
 
-There is **no test suite** in this repo. Verify by running the app end-to-end
-(add a Sleep Company meeting → brief auto-generates → open it → chat).
+**Tests.** Backend: `pytest` from `backend/` (uses the checked-in venv; ~90 tests,
+run with `MOCK_LLM/EMAIL/GOOGLE/WEB` so nothing hits the network). Frontend: `npm run
+test` (Vitest unit tests) and `npx playwright test` (visual E2E; boots a mock backend
++ Vite). The full verification gate before shipping is **pytest + `npm run build` +
+Playwright** (see the `dev-workflow` skill). Still worth a manual end-to-end pass for
+UX (add a Sleep Company meeting → brief auto-generates → open it → chat).
 
 > Windows note: if `node`/`npm` aren't found in a fresh PowerShell, refresh PATH:
 > `$env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")`
@@ -93,11 +97,24 @@ agenda = "scaling support" → Zoho Desk gets weight); this is the demo's proof 
 synthesis is real.
 
 **Frontend** (`frontend/src/`): React 19 + Vite + TS + Tailwind, React Router,
-TanStack Query, FullCalendar. `api/client.ts` is the axios client (base URL
-hardcoded to `http://localhost:8000`); `api/types.ts` mirrors `schemas.py`. Pages:
-`Calendar` (add meetings), `Dashboard` (brief status cards + polling), `BriefView`
-(9-section render + `ChatPanel`). PDF export is **client-side** via `lib/pdf.ts`
-(html2pdf.js) over the server-rendered brief HTML — no server PDF deps.
+TanStack Query, FullCalendar. `api/client.ts` is the axios client (base URL from
+`VITE_API_URL`, defaulting to `http://localhost:8000` in dev; production builds set
+`VITE_API_URL=/api` via `frontend/.env.production` so the API is same-origin behind
+Caddy); `api/types.ts` mirrors `schemas.py`. Pages: `Calendar` (add meetings),
+`Dashboard` (brief status cards + polling), `BriefView` (9-section render +
+`ChatPanel`), `Settings` (Google connect, automation, Developer Library). PDF export
+is **client-side** via `lib/pdf.ts` (html2pdf.js) over the brief HTML — no server PDF
+deps for the *view*; the "Send as email" attachment is a server-side PDF (xhtml2pdf).
+
+**Personas.** Six (see `Persona` in `schemas.py`): Sales Representative, Sales
+Manager, Sales Enablement, Revenue Operations, VP of Sales, Admin. Each reframes the
+brief; the signed-in user sees only their own persona's tab.
+
+**Hosting & deploy.** Live free on a GCP Always-Free VM behind Caddy (auto-HTTPS,
+`/api/*` → uvicorn). `main` auto-deploys on merge via GitHub Actions over an IAP
+tunnel (keyless Workload Identity Federation). Public access is gated by a Caddy
+shared-password (basic-auth). See `deploy/README.md`, `deploy/GITHUB_ACTIONS.md`, and
+`docs/SECURITY_AND_QUALITY_PLAN.md`.
 
 ## Conventions
 

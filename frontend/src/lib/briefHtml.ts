@@ -1,12 +1,21 @@
 import type { BriefContent } from "../api/types";
 
+/** HTML-escape a string so it can't inject markup. Used for every field that is
+ * interpolated into the exported HTML raw (company, headline, section/source titles,
+ * filenames) — these are LLM/free-text-derived, so an un-escaped `<img onerror=…>`
+ * would execute when the brief is rendered to a live element for PDF capture. */
+export function escHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Minimal, dependency-free markdown → HTML for PDF export fallback. */
 function mdToHtml(md: string): string {
-  const esc = (s: string) =>
-    s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  const esc = escHtml;
 
   const inline = (s: string) =>
     esc(s)
@@ -63,7 +72,7 @@ export function renderBriefToHtml(content: BriefContent): string {
         : "";
       return `
         <section style="margin:0 0 18px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px">
-          <h3 style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a">${s.title}${flag}</h3>
+          <h3 style="margin:0 0 6px;font-size:15px;font-weight:700;color:#0f172a">${escHtml(s.title)}${flag}</h3>
           <div style="font-size:13px;color:#334155">${mdToHtml(s.content_md)}</div>
         </section>`;
     })
@@ -72,8 +81,8 @@ export function renderBriefToHtml(content: BriefContent): string {
   const sources = content.sources
     .map(
       (src) =>
-        `<li style="margin:3px 0"><strong style="color:#4f46e5">[${src.marker}]</strong> ${src.title}${
-          src.filename ? ` <span style="color:#94a3b8">— ${src.filename}</span>` : ""
+        `<li style="margin:3px 0"><strong style="color:#4f46e5">[${escHtml(src.marker)}]</strong> ${escHtml(src.title)}${
+          src.filename ? ` <span style="color:#94a3b8">— ${escHtml(src.filename)}</span>` : ""
         }</li>`,
     )
     .join("");
@@ -82,8 +91,8 @@ export function renderBriefToHtml(content: BriefContent): string {
     <div style="font-family:Inter,system-ui,sans-serif;color:#0f172a;background:#fff">
       <div style="border-bottom:2px solid #4f46e5;padding-bottom:10px;margin-bottom:16px">
         <div style="font-size:12px;font-weight:700;letter-spacing:.08em;color:#4f46e5">SALESINTEL AI · PRE-CALL BRIEF</div>
-        <h1 style="margin:6px 0 2px;font-size:22px;font-weight:800">${content.company}</h1>
-        ${content.headline ? `<p style="margin:0;font-size:13px;color:#475569">${content.headline}</p>` : ""}
+        <h1 style="margin:6px 0 2px;font-size:22px;font-weight:800">${escHtml(content.company)}</h1>
+        ${content.headline ? `<p style="margin:0;font-size:13px;color:#475569">${escHtml(content.headline)}</p>` : ""}
       </div>
       ${sections}
       <section style="margin-top:8px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">

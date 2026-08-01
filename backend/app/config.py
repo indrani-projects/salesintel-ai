@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./salesintel.db"
     docs_root: str = "../docs"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
+    # Expose the interactive API docs (/docs, /redoc, /openapi.json). On in local dev,
+    # turned OFF in production (EXPOSE_DOCS=false) so the public deploy doesn't publish a
+    # self-documenting map of the API surface.
+    expose_docs: bool = True
 
     # When true, the brief engine and Scout return deterministic canned output
     # instead of calling the LLM — used by tests and Playwright E2E so they are

@@ -33,7 +33,7 @@ from app.services import (
     sources,
     web_sources,
 )
-from app.services.retrieval import ExtractedPage, _domain
+from app.services.retrieval import ExtractedPage, domain
 
 _BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
 # Git-ignored (backend/.cache/ is in .gitignore), mirrors the webintel/ cache pattern.
@@ -201,7 +201,7 @@ def _gather_pages(company_name: str, competitors: List[str]) -> List[ExtractedPa
         for wd in web_sources.fetch_intel(company_name):
             if wd.text and wd.text.strip():
                 pages.append(ExtractedPage(
-                    url=wd.url or "", domain=_domain(wd.url or ""),
+                    url=wd.url or "", domain=domain(wd.url or ""),
                     title=wd.source, markdown=wd.text,
                 ))
     except Exception:  # noqa: BLE001 — feeds are best-effort

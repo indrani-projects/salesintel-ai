@@ -9,6 +9,10 @@ venv/
 # Env / secrets
 .env
 backend/.env
+# Local env overrides (Vite + general). frontend/.env.production is intentionally
+# tracked; these local/secret variants must never be committed.
+.env.local
+.env.*.local
 
 # Database
 *.db

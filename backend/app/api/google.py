@@ -9,6 +9,7 @@ Endpoints:
 """
 from __future__ import annotations
 
+import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
@@ -26,6 +27,7 @@ from app.schemas import CalendarSyncResult, GoogleStatus
 from app.services import google_service, sources
 
 router = APIRouter(tags=["google"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/auth/google/login")
@@ -40,17 +42,24 @@ def google_login():
 
 
 @router.get("/auth/google/callback")
-def google_callback(code: Optional[str] = Query(None), error: Optional[str] = Query(None)):
+def google_callback(
+    code: Optional[str] = Query(None),
+    error: Optional[str] = Query(None),
+    state: Optional[str] = Query(None),
+):
     dest = settings.frontend_url.rstrip("/") + "/settings"
     if error or not code:
-        print(f"[google] callback returned error param: {error!r}", flush=True)
+        logger.warning("Google callback returned error param: %r", error)
+        return RedirectResponse(f"{dest}?google=error")
+    # CSRF: only accept a callback whose state was minted by our own login redirect
+    # (signed + time-bounded). Rejects forged/replayed callbacks.
+    if not google_service.verify_state(state or ""):
+        logger.warning("Google callback rejected: missing/invalid state")
         return RedirectResponse(f"{dest}?google=error")
     try:
         google_service.exchange_code(code)
-    except Exception as exc:  # noqa: BLE001
-        import traceback
-        traceback.print_exc()
-        print(f"[google] exchange_code failed: {type(exc).__name__}: {exc}", flush=True)
+    except Exception:  # noqa: BLE001
+        logger.exception("Google exchange_code failed")
         return RedirectResponse(f"{dest}?google=error")
     return RedirectResponse(f"{dest}?google=connected")
 
@@ -136,7 +145,7 @@ def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
     non-alphanumerics -> underscores) so 'Discovery call with Sleep Company'
     still resolves to 'The Sleep Company'."""
     summary = event.get("summary", "") or ""
-    hay = sources._normalize(
+    hay = sources.slugify(
         " ".join(
             [summary, event.get("description", "")]
             + list(event.get("attendees", []))
@@ -145,13 +154,13 @@ def _match_prospect(event: dict) -> Tuple[Optional[str], Optional[str]]:
 
     # 1) Known company with docs (highest confidence).
     for c in sources.list_companies():
-        key = sources._normalize(c.name)  # "The Sleep Company" -> "sleep_company"
+        key = sources.slugify(c.name)  # "The Sleep Company" -> "sleep_company"
         if key and key in hay:
             return c.slug, c.name
 
     # 2) Enrichment company from the research guide (web-first, no docs folder).
     for name_key, display in _HINT_DISPLAY.items():
-        if sources._normalize(display) in hay:
+        if sources.slugify(display) in hay:
             return None, display
 
     # 3) Generic: extract any company from a sales-meeting-style title. The
@@ -230,7 +239,7 @@ def import_calendar_events() -> Tuple[int, int, int, int, int]:
                 continue
 
             # Already imported — apply any edit the rep made in Google.
-            company_changed = sources._normalize(existing.prospect_company) != sources._normalize(name)
+            company_changed = sources.slugify(existing.prospect_company) != sources.slugify(name)
             subject_changed = (existing.subject or "") != new_subject
             time_changed = existing.start_time != new_start
             if not (company_changed or subject_changed or time_changed):
@@ -328,7 +337,8 @@ def calendar_sync(background_tasks: BackgroundTasks) -> CalendarSyncResult:
                 detail="Google connection expired or was revoked — open Settings, "
                 "Disconnect, then Connect Google again.",
             )
-        raise HTTPException(status_code=502, detail=f"Calendar sync failed: {exc}")
+        logger.exception("Calendar sync failed")
+        raise HTTPException(status_code=502, detail="Calendar sync failed. Please try again.")
 
     if imported or updated:
         background_tasks.add_task(meetings_api.generate_pending_briefs)

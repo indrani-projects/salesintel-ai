@@ -1,9 +1,31 @@
 # SalesIntel AI — public entrypoint. Caddy terminates HTTPS (auto Let's Encrypt),
 # serves the built React SPA, and reverse-proxies the API to uvicorn on localhost.
-# deploy.sh renders __SITE_HOST__ into the real hostname before installing this to
-# /etc/caddy/Caddyfile.
+# deploy.sh renders __SITE_HOST__ into the real hostname, and injects the shared-
+# password gate (at the marker below) from /etc/salesintel/env before installing this
+# to /etc/caddy/Caddyfile.
 __SITE_HOST__ {
 	encode zstd gzip
+
+	# Security headers on every response (A3). HSTS + nosniff + anti-clickjacking +
+	# referrer policy. The CSP is deliberately permissive enough for the SPA and the
+	# client-side PDF export (inline styles, blob workers) while still blocking
+	# cross-origin framing and object/base hijacking.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Content-Security-Policy "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self' data:; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+		-Server
+	}
+
+	# Shared-password access gate (A1). deploy.sh replaces the marker below with a
+	# basic_auth block built from DEMO_AUTH_USER / DEMO_AUTH_HASH in /etc/salesintel/env.
+	# Exempt paths (health + OAuth) are handled inside that block via a `not path`
+	# matcher, so the CI health probe and Google's browser callback still work. If no
+	# hash is configured, deploy.sh injects nothing and the site stays open (with a
+	# warning) — a missing secret can never break the site.
+	# __BASICAUTH_BLOCK__
 
 	# API + OAuth callback: strip the /api prefix, forward to the backend, which
 	# binds 127.0.0.1 only (never exposed directly). e.g. Google calls
