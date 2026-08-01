@@ -48,7 +48,12 @@ jobs:
       - name: Set up gcloud
         uses: google-github-actions/setup-gcloud@v2
 
-      # A single reusable prefix: project + zone + IAP tunnel for every gcloud call.
+      # gcloud's IAP TCP forwarding is dramatically faster when NumPy is importable
+      # by the same Python gcloud runs on (it warns about this otherwise). Without it,
+      # a ~25 MB payload can stall for minutes over the tunnel.
+      - name: Speed up the IAP tunnel (NumPy)
+        run: python3 -m pip install --quiet numpy
+
       - name: Deploy over the IAP tunnel
         env:
           PROJECT: ${{ vars.GCP_PROJECT }}
@@ -59,28 +64,32 @@ jobs:
           set -euo pipefail
           gcloud config set project "$PROJECT"
 
+          # One archive instead of 135 files: scp opens per-file round-trips over the
+          # tunnel, so a single tarball transfers far faster. Archive top level is
+          # backend/ docs/ deploy/ dist/ (dist added from frontend/ via -C).
+          echo "==> package payload -> payload.tgz"
+          tar -czf payload.tgz backend docs deploy -C frontend dist
+          ls -lh payload.tgz
+
           # --quiet keeps every gcloud/ssh call non-interactive on the runner.
-          echo "==> stage a clean payload dir on the VM"
-          gcloud compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --quiet \
-            --command 'rm -rf /tmp/ci-payload && mkdir -p /tmp/ci-payload'
+          echo "==> copy the archive to the VM"
+          gcloud compute scp --tunnel-through-iap --zone "$ZONE" --quiet \
+            payload.tgz "$VM":/tmp/ci-payload.tgz
 
-          echo "==> upload backend, docs, deploy, and the built frontend"
-          gcloud compute scp --recurse --tunnel-through-iap --zone "$ZONE" --quiet \
-            backend docs deploy frontend/dist \
-            "$VM":/tmp/ci-payload/
-
-          echo "==> place payload + run the existing deploy.sh"
+          echo "==> unpack + place + run the existing deploy.sh"
           # rsync each piece into /opt/salesintel. --delete removes stale files, but
           # backend keeps its venv and the git-ignored research cache (both live only
           # on the VM). The DB is untouched — it lives in /var/lib/salesintel.
           gcloud compute ssh "$VM" --zone "$ZONE" --tunnel-through-iap --quiet \
             --command "set -euo pipefail
+              rm -rf /tmp/ci-payload && mkdir -p /tmp/ci-payload
+              tar -xzf /tmp/ci-payload.tgz -C /tmp/ci-payload
               sudo mkdir -p /opt/salesintel/frontend
               sudo rsync -a --delete --exclude '.venv' --exclude '.cache' /tmp/ci-payload/backend/ /opt/salesintel/backend/
               sudo rsync -a --delete /tmp/ci-payload/docs/   /opt/salesintel/docs/
               sudo rsync -a --delete /tmp/ci-payload/deploy/ /opt/salesintel/deploy/
               sudo rsync -a --delete /tmp/ci-payload/dist/   /opt/salesintel/frontend/dist/
-              rm -rf /tmp/ci-payload
+              rm -rf /tmp/ci-payload /tmp/ci-payload.tgz
               SITE_HOST='$SITE_HOST' sudo -E bash /opt/salesintel/deploy/deploy.sh"
 
       - name: Verify the live health endpoint
