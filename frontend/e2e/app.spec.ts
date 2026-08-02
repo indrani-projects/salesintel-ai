@@ -155,8 +155,8 @@ test("settings shows the automated-emails card", async ({ page }) => {
 test("settings shows the Developer Library with doc links", async ({ page, request }) => {
   await page.goto("/settings");
   await expect(page.getByRole("heading", { name: "Developer Library" })).toBeVisible();
-  // The four friendly-named docs are linked.
-  for (const name of ["How It Works", "Build Tracker", "Operations Runbook", "Architecture & Build Plan"]) {
+  // The friendly-named docs are linked.
+  for (const name of ["How It Works", "Architecture", "Build Tracker", "Operations Runbook", "Build Plan & Roadmap"]) {
     await expect(page.getByRole("link", { name: new RegExp(name) })).toBeVisible();
   }
   // The runbook link points at its generated static page, and that page is served.
@@ -167,6 +167,14 @@ test("settings shows the Developer Library with doc links", async ({ page, reque
   const res = await request.get("/library/runbook.html");
   expect(res.status()).toBe(200);
   expect(await res.text()).toContain("Operations Runbook");
+  // The new Architecture doc is generated and served with its data-processing content.
+  await expect(page.getByRole("link", { name: /Architecture/ })).toHaveAttribute(
+    "href",
+    "/library/architecture.html",
+  );
+  const arch = await request.get("/library/architecture.html");
+  expect(arch.status()).toBe(200);
+  expect(await arch.text()).toContain("web-to-pitch");
   await page.screenshot({ path: `${SHOTS}/13-settings-library.png`, fullPage: true });
 });
 
