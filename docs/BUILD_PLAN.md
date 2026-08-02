@@ -8,10 +8,17 @@ effort. This POC demonstrates the **core value — the synthesis layer** — for
 concrete scenario: **Zoho selling to The Sleep Company** (a real, funded Indian
 D2C mattress brand; a right-sized, credible Zoho prospect).
 
-We deliberately fake the hard infrastructure (live LinkedIn/News/Crunchbase
-scraping) and prove the intelligence instead. The "data ingestion layer" is a
-local `docs/` folder of pre-fetched, citable source PDFs. This matches the PRD's
-"as cheaply as possible to test the hypothesis" ethos.
+The value we prove is the **synthesis layer**, but the data feeding it is **real**.
+A deterministic, keyless **web-to-pitch** pipeline gathers live public signal about
+the prospect *by name* — a DuckDuckGo + Wikipedia search with main-text extraction
+(`trafilatura`), plus **Google News**, **SEC EDGAR**, and **Reddit** feeds — then
+keyword-filters it against a research-guide taxonomy and scores each source's
+credibility by domain, all with **no LLM**. Only the final synthesis is an LLM call.
+A local `docs/<company>/` folder of citable PDFs is a **fallback** for when the web
+returns nothing (and is how the flagship Sleep Company demo stays deterministic).
+This keeps costs near-zero — keyless public sources + the Gemini free tier — matching
+the PRD's "as cheaply as possible to test the hypothesis" ethos *without* faking the
+ingestion. See `docs/ARCHITECTURE.md` for the full data-processing flow.
 
 The brief is built from **two knowledge sources** (PRD §13): the prospect docs
 (`docs/sleep_company/`) and a first-party Zoho capability sheet (`docs/zoho/`).
@@ -82,9 +89,12 @@ feel intelligent.
 | Config | pydantic-settings + .env | API key management |
 
 **Deliberate POC simplifications (call these out in the presentation):**
-no vector DB (docs stuffed into context — RAG is the scale path); local folder
-instead of live scraping; SQLite instead of Postgres; BackgroundTasks instead of
-a job queue. Interfaces (`SourceProvider`) are kept clean so each can be swapped.
+no vector DB (the whole filtered source set is stuffed into ONE LLM call — RAG is
+the scale path); web intel comes from **keyless** public sources with a local
+`docs/` folder as fallback, and the heavy prep can be run **offline via a CLI**
+(`python -m app.tools.prepare`) so briefs then serve instantly from that cache;
+SQLite instead of Postgres; BackgroundTasks instead of a job queue. Interfaces
+(`SourceProvider`) are kept clean so each can be swapped.
 
 ## Repo structure
 

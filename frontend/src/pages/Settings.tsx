@@ -13,6 +13,7 @@ import {
   ListChecks,
   Loader2,
   Mail,
+  Network,
   RefreshCw,
   Send,
   Unplug,
@@ -37,6 +38,12 @@ const LIBRARY = [
     Icon: BookOpen,
   },
   {
+    href: "/library/architecture.html",
+    title: "Architecture",
+    blurb: "How the system fits together and how prospect data is processed.",
+    Icon: Network,
+  },
+  {
     href: "/library/project-tracker.html",
     title: "Build Tracker",
     blurb: "Every feature we've shipped, grouped by phase.",
@@ -50,8 +57,8 @@ const LIBRARY = [
   },
   {
     href: "/library/build-plan.html",
-    title: "Architecture & Build Plan",
-    blurb: "The design, tech stack, and product roadmap.",
+    title: "Build Plan & Roadmap",
+    blurb: "The product framing, tech choices, and roadmap.",
     Icon: FileText,
   },
 ];
