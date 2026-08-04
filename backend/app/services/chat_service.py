@@ -19,7 +19,7 @@ from app.schemas import (
 )
 from app.services.llm_client import get_client, get_model
 from app.services.sources import load_company_intel
-from app.services.textutil import MAX_DOC_CHARS, strip_fences
+from app.services.textutil import MAX_DOC_CHARS, extract_json_object, strip_fences
 
 SYSTEM_PROMPT = (
     "You are a grounded pre-sales assistant answering a Zoho sales rep's follow-up "
@@ -131,18 +131,23 @@ def answer_question(
         )
     raw = resp.choices[0].message.content or ""
 
-    answer_md = ""
     grounded = True
-    try:
-        data = json.loads(strip_fences(raw))
-        if isinstance(data, dict):
-            answer_md = str(data.get("answer_md", "") or "")
-            grounded = bool(data.get("grounded", True))
+    data = extract_json_object(raw)
+    if data is not None:
+        answer_md = str(data.get("answer_md", "") or "")
+        grounded = bool(data.get("grounded", True))
+    else:
+        # No parseable JSON object. If it's a malformed JSON blob, pull answer_md out
+        # rather than dumping the raw `{ "answer_md": ... }` to the user; otherwise the
+        # model returned plain markdown — use it as-is.
+        m = re.search(r'"answer_md"\s*:\s*"((?:\\.|[^"\\])*)"', raw)
+        if m:
+            try:
+                answer_md = json.loads('"' + m.group(1) + '"')
+            except Exception:  # noqa: BLE001
+                answer_md = strip_fences(raw)
         else:
-            answer_md = raw.strip()
-    except Exception:
-        # Not JSON — treat the raw text as the answer.
-        answer_md = strip_fences(raw)
+            answer_md = strip_fences(raw)
 
     if not answer_md.strip():
         answer_md = "That isn't covered by the available sources."

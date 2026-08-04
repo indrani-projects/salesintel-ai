@@ -1,6 +1,7 @@
 import { Children, isValidElement } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 const CITATION_SPLIT_RE = /(\[S\d+\])/g;
 const CITATION_MATCH_RE = /^\[S\d+\]$/;
@@ -43,7 +44,12 @@ const citeComponents = {
 export function MarkdownView({ children }: { children: string }) {
   return (
     <div className="md">
-      <ReactMarkdown components={citeComponents}>{children}</ReactMarkdown>
+      {/* remark-gfm auto-links bare URLs (e.g. an official website in a Scout answer)
+          and enables tables/strikethrough. It renders raw HTML as text (no rehype-raw),
+          so it stays XSS-safe. */}
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={citeComponents}>
+        {children}
+      </ReactMarkdown>
     </div>
   );
 }
