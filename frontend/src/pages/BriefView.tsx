@@ -18,6 +18,15 @@ import { CONFIDENCE_META, formatDateTime } from "../lib/format";
 import { PERSONAS, PERSONA_LABELS } from "../lib/persona";
 import { useAuth } from "../lib/auth";
 
+/** Short, human label for a source link — the domain, e.g. "techcrunch.com". */
+function linkLabel(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "link";
+  }
+}
+
 function KpiStrip({ facts }: { facts: KeyFact[] }) {
   const items = facts.slice(0, 4);
   if (items.length === 0) return null;
@@ -282,9 +291,9 @@ export function BriefView() {
                               href={src.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="ml-1 text-brand-600 underline underline-offset-2"
+                              className="ml-1 break-all text-brand-600 underline underline-offset-2"
                             >
-                              link
+                              {linkLabel(src.url)}
                             </a>
                           )}
                         </span>

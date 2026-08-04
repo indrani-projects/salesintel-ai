@@ -33,6 +33,19 @@ describe("renderBriefToHtml XSS safety", () => {
     expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
   });
 
+  it("renders a source URL as a link and omits the internal filename", () => {
+    const b = {
+      ...brief,
+      company: "Sprout Social",
+      headline: "Social suite",
+      sections: [{ title: "Snapshot", content_md: "ok", confidence: "high" }],
+      sources: [{ marker: "S1", title: "TechCrunch", filename: null, url: "https://techcrunch.com/x" }],
+    } as unknown as BriefContent;
+    const html = renderBriefToHtml(b);
+    expect(html).toContain('href="https://techcrunch.com/x"');
+    expect(html).not.toContain(".md");
+  });
+
   it("still renders legitimate content unchanged", () => {
     const ok = {
       ...brief,
