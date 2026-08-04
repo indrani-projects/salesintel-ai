@@ -36,3 +36,13 @@ def test_local_pdf_keeps_filename_no_url():
     [bs] = _sources_from_docs([doc])
     assert bs.filename == "report.pdf"
     assert bs.url is None
+
+
+def test_local_md_knowledge_file_is_hidden():
+    # The Zoho knowledge sheet (docs/zoho/zoho_capabilities.md) — a bare .md is an
+    # internal/dev artifact, not a user-facing reference.
+    doc = SourceDoc(marker="S4", title="zoho capabilities",
+                    filename="zoho_capabilities.md", url=None, tags=["zoho"])
+    assert _display_filename(doc) is None
+    [bs] = _sources_from_docs([doc])
+    assert bs.filename is None

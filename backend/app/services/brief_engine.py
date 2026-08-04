@@ -241,9 +241,16 @@ def _is_web_source(doc: SourceDoc) -> bool:
 
 
 def _display_filename(doc: SourceDoc) -> Optional[str]:
-    """Hide the prepared/web cache `.md` filename (an internal artifact); keep a real
-    local-doc filename (e.g. a PDF under docs/<company>/)."""
-    return None if _is_web_source(doc) else doc.filename
+    """What to show as a source's file reference. Web/prepared sources surface their URL
+    instead (return None). For local docs, keep a real document name (a PDF under
+    docs/<company>/) but hide bare `.md` files — those are internal/dev artifacts (e.g.
+    the Zoho knowledge sheet, the prepared cache), never a user-facing reference."""
+    if _is_web_source(doc):
+        return None
+    fn = doc.filename
+    if fn and fn.lower().endswith(".md"):
+        return None
+    return fn
 
 
 def _user_prompt(
