@@ -82,7 +82,11 @@ export function renderBriefToHtml(content: BriefContent): string {
     .map(
       (src) =>
         `<li style="margin:3px 0"><strong style="color:#4f46e5">[${escHtml(src.marker)}]</strong> ${escHtml(src.title)}${
-          src.filename ? ` <span style="color:#94a3b8">— ${escHtml(src.filename)}</span>` : ""
+          src.url
+            ? ` <a href="${escHtml(src.url)}" style="color:#4f46e5;text-decoration:underline">${escHtml(src.url)}</a>`
+            : src.filename
+              ? ` <span style="color:#94a3b8">— ${escHtml(src.filename)}</span>`
+              : ""
         }</li>`,
     )
     .join("");
