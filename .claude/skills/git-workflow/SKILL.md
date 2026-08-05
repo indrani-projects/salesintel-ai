@@ -14,7 +14,7 @@ Enforcement below. The hooks are a safety net; follow the steps regardless.
 
 ## Authorship (required on every commit)
 
-- **Author:** `indrani-projects <indrani.patra.projects@gmail.com>`
+- **Author:** `indrani-projects <indrani-projects@users.noreply.github.com>`
 - **Co-author trailer:** `Co-Authored-By: Claude <noreply@anthropic.com>`
 
 The repo's local git config already sets the author; the `commit-msg` hook adds the
@@ -22,7 +22,7 @@ co-author trailer automatically. Do **not** use the machine's default identity
 (Shantanu). If `git config user.email` is anything else in this repo, fix it:
 ```
 git config user.name  "indrani-projects"
-git config user.email "indrani.patra.projects@gmail.com"
+git config user.email "indrani-projects@users.noreply.github.com"
 ```
 
 ## One-time setup per clone

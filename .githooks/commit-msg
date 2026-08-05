@@ -2,7 +2,7 @@
 # ---------------------------------------------------------------------------
 # commit-msg — guarantee the Claude co-author trailer on every commit.
 # Combined with the repo's git identity (user.name=indrani-projects,
-# user.email=indrani.patra.projects@gmail.com) this enforces the required
+# user.email=indrani-projects@users.noreply.github.com) this enforces the required
 # authorship automatically, so no commit can miss it. See the git-workflow skill.
 # ---------------------------------------------------------------------------
 msg_file="$1"

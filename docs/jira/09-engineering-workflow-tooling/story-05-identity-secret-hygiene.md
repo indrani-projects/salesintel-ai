@@ -14,7 +14,7 @@
 As a maintainer, I want every commit to carry one consistent identity and no secret to ever enter the repo, so that the git history is clean and attributable and no credential is leaked to anyone who clones it.
 
 ## Description
-Two adjacent hygiene concerns, one story. First, **commit identity**: every commit is authored as `indrani-projects <indrani.patra.projects@gmail.com>` with a `Co-Authored-By: Claude` trailer. The git history was **rewritten to remove a personal identity** that had crept into early commits, so the whole log presents a single, intentional author. (The trailer is kept automatic by the `commit-msg` hook from SI-9.3.)
+Two adjacent hygiene concerns, one story. First, **commit identity**: every commit is authored as `indrani-projects <indrani-projects@users.noreply.github.com>` with a `Co-Authored-By: Claude` trailer. The git history was **rewritten to remove a personal identity** that had crept into early commits, so the whole log presents a single, intentional author. (The trailer is kept automatic by the `commit-msg` hook from SI-9.3.)
 
 Second, **secret hygiene**: `.gitignore` guards keep sensitive and runtime files out of version control — never commit `.env` (LLM/SMTP credentials), `share.config` (tunnel/ngrok config), `.logs/` (runtime logs), or `client_secret_*.json`. That last pattern is not hypothetical: a downloaded **Google OAuth client-secret JSON was caught by a pre-commit secret scan** before it could be committed, and the ignore pattern was added so it can never slip in again.
 
@@ -25,7 +25,7 @@ Second, **secret hygiene**: `.gitignore` guards keep sensitive and runtime files
 Scenario: History presents a single consistent author
   Given the rewritten git history
   When the log is inspected
-  Then every commit is authored as indrani-projects <indrani.patra.projects@gmail.com>
+  Then every commit is authored as indrani-projects <indrani-projects@users.noreply.github.com>
   And carries a Co-Authored-By: Claude trailer
   And no personal identity remains in the history
 ```
@@ -55,11 +55,11 @@ Scenario: Branch protection is a documented, deliberate deferral
 ## Technical notes (reference)
 - Key files: `.gitignore`, repo git config (author identity), and the SI-9.3 `commit-msg` hook (trailer).
 - `.gitignore` patterns include `.env`, `share.config`, `.logs/`, and `client_secret_*.json`; the last was added after a pre-commit secret scan intercepted a downloaded Google OAuth client-secret file.
-- History rewrite normalized author/committer to `indrani-projects <indrani.patra.projects@gmail.com>`; the `Co-Authored-By: Claude` trailer is enforced going forward by the commit-msg hook.
+- History rewrite normalized author/committer to `indrani-projects <indrani-projects@users.noreply.github.com>`; the `Co-Authored-By: Claude` trailer is enforced going forward by the commit-msg hook.
 - Server-side branch protection is unavailable free on private repos (Free plan); evaluated and deferred, with local `pre-push` (SI-9.3) as the interim guardrail.
 
 ## Definition of Done
-- [x] All commits authored `indrani-projects <indrani.patra.projects@gmail.com>` + `Co-Authored-By: Claude`.
+- [x] All commits authored `indrani-projects <indrani-projects@users.noreply.github.com>` + `Co-Authored-By: Claude`.
 - [x] History rewritten to remove the personal identity; log presents one consistent author.
 - [x] `.gitignore` guards `.env`, `share.config`, `.logs/`, and `client_secret_*.json`.
 - [x] Downloaded OAuth client-secret JSON verified caught before commit.
