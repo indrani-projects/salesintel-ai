@@ -5,7 +5,7 @@
 # required commit identity. See .claude/skills/git-workflow for the full workflow.
 git config core.hooksPath .githooks
 git config user.name  "indrani-projects"
-git config user.email "indrani.patra.projects@gmail.com"
+git config user.email "indrani-projects@users.noreply.github.com"
 echo "SalesIntel git workflow enabled for this clone:"
 echo "  core.hooksPath = $(git config core.hooksPath)"
 echo "  identity       = $(git config user.name) <$(git config user.email)>"

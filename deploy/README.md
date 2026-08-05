@@ -51,32 +51,32 @@ cd ..
 # 2. Upload the payload to the VM (via gcloud IAP; run from your machine).
 #    Excludes venv/node_modules/.git; INCLUDES backend/.cache (git-ignored research data).
 gcloud compute scp --recurse --tunnel-through-iap \
-  backend docs deploy frontend/dist salesintel-vm:/tmp/payload/ --zone us-central1-a
+  backend docs deploy frontend/dist your-vm:/tmp/payload/ --zone us-central1-a
 # then on the VM, place it:
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a --command '
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a --command '
   sudo mkdir -p /opt/salesintel/frontend &&
   sudo cp -r /tmp/payload/backend /tmp/payload/docs /tmp/payload/deploy /opt/salesintel/ &&
   sudo cp -r /tmp/payload/dist /opt/salesintel/frontend/dist &&
   rm -rf /tmp/payload'
 
 # 3. One-time bootstrap (installs Caddy, user, dirs, auto-updates)
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a \
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a \
   --command 'sudo bash /opt/salesintel/deploy/bootstrap.sh'
 
 # 4. Create the env file from the template, fill secrets from local backend/.env,
 #    replace __SITE_HOST__ with $HOST, then lock it down:
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a --command "
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a --command "
   sudo cp /opt/salesintel/deploy/env.production.example /etc/salesintel/env &&
   sudo chown salesintel:salesintel /etc/salesintel/env && sudo chmod 600 /etc/salesintel/env &&
   sudo sed -i 's/__SITE_HOST__/$HOST/g' /etc/salesintel/env"
 #    ...then edit /etc/salesintel/env to paste the real LLM/Google secrets.
 
 # 5. Deploy (venv, publish, services, HTTPS cert issues automatically)
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a \
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a \
   --command "SITE_HOST=$HOST sudo -E bash /opt/salesintel/deploy/deploy.sh"
 
 # 6. Daily backup cron
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a --command '
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a --command '
   ( sudo crontab -l 2>/dev/null; echo "0 3 * * * /opt/salesintel/deploy/backup.sh" ) | sudo crontab -'
 ```
 
@@ -95,7 +95,7 @@ manual run.
 ```bash
 cd frontend && npm run build && cd ..
 # re-run step 2 (upload) then:
-gcloud compute ssh salesintel-vm --tunnel-through-iap --zone us-central1-a \
+gcloud compute ssh your-vm --tunnel-through-iap --zone us-central1-a \
   --command "SITE_HOST=$HOST sudo -E bash /opt/salesintel/deploy/deploy.sh"
 ```
 The database is untouched (it lives in `/var/lib/salesintel`, outside the deploy dir).
