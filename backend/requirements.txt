@@ -12,4 +12,4 @@ xhtml2pdf==0.2.17
 google-auth==2.56.0
 google-auth-oauthlib==1.4.0
 google-api-python-client==2.198.0
-pytest==8.3.4
+pytest==9.0.3
