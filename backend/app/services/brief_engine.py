@@ -218,7 +218,8 @@ def _build_source_inventory(sources: List[SourceDoc]) -> str:
     lines = []
     for s in sources:
         tag = (s.tags[0] if s.tags else "prospect")
-        lines.append(f"[{s.marker}] ({tag}) {s.title} — file: {s.filename}")
+        ref = s.url or s.filename or ""  # show the web URL, not the internal cache file
+        lines.append(f"[{s.marker}] ({tag}) {s.title}" + (f" — {ref}" if ref else ""))
     return "\n".join(lines)
 
 
@@ -228,9 +229,28 @@ def _build_source_corpus(sources: List[SourceDoc]) -> str:
         tag = (s.tags[0] if s.tags else "prospect")
         blocks.append(
             f"===== SOURCE {s.marker} | tag={tag} | title={s.title} | "
-            f"file={s.filename} =====\n{s.text}"
+            f"src={s.url or s.filename or ''} =====\n{s.text}"
         )
     return "\n\n".join(blocks)
+
+
+def _is_web_source(doc: SourceDoc) -> bool:
+    """A web/prepared source — surface its URL, not the internal cache `.md` filename."""
+    tags = doc.tags or []
+    return bool(doc.url or "web" in tags or "prepared" in tags)
+
+
+def _display_filename(doc: SourceDoc) -> Optional[str]:
+    """What to show as a source's file reference. Web/prepared sources surface their URL
+    instead (return None). For local docs, keep a real document name (a PDF under
+    docs/<company>/) but hide bare `.md` files — those are internal/dev artifacts (e.g.
+    the Zoho knowledge sheet, the prepared cache), never a user-facing reference."""
+    if _is_web_source(doc):
+        return None
+    fn = doc.filename
+    if fn and fn.lower().endswith(".md"):
+        return None
+    return fn
 
 
 def _user_prompt(
@@ -312,7 +332,7 @@ def _placeholder_section(sid: str, title: str) -> BriefSection:
 
 def _sources_from_docs(sources: List[SourceDoc]) -> list[BriefSource]:
     return [
-        BriefSource(marker=s.marker, title=s.title, filename=s.filename, url=s.url)
+        BriefSource(marker=s.marker, title=s.title, filename=_display_filename(s), url=s.url)
         for s in sources
     ]
 
@@ -357,7 +377,10 @@ def _parse_brief(
         else:
             sections.append(sec)
 
-    # Sources: prefer model-declared, else fall back to the loaded inventory.
+    # Sources: keep the model's marker + title, but ALWAYS take url + filename from the
+    # real loaded inventory (the model is never shown URLs, and the cache `.md` filename
+    # is an internal artifact — web sources must surface the link, not the file).
+    by_marker = {d.marker: d for d in fallback_sources}
     parsed_sources: list[BriefSource] = []
     for item in data.get("sources", []) or []:
         if not isinstance(item, dict):
@@ -365,14 +388,27 @@ def _parse_brief(
         marker = str(item.get("marker", "")).strip()
         if not marker:
             continue
-        parsed_sources.append(
-            BriefSource(
-                marker=marker,
-                title=str(item.get("title") or marker),
-                filename=item.get("filename"),
-                url=item.get("url"),
+        doc = by_marker.get(marker)
+        if doc is not None:
+            parsed_sources.append(
+                BriefSource(
+                    marker=marker,
+                    title=str(item.get("title") or doc.title),
+                    filename=_display_filename(doc),
+                    url=doc.url,
+                )
             )
-        )
+        else:
+            # A marker the model invented (not in the inventory) — trust the title only,
+            # never a stray `.md` filename.
+            parsed_sources.append(
+                BriefSource(
+                    marker=marker,
+                    title=str(item.get("title") or marker),
+                    filename=None,
+                    url=item.get("url") or None,
+                )
+            )
     if not parsed_sources:
         parsed_sources = _sources_from_docs(fallback_sources)
 

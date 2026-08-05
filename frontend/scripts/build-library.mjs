@@ -21,12 +21,14 @@ marked.setOptions({ gfm: true, breaks: false });
 const DOCS_LIST = [
   { file: "how-it-works.html", title: "How It Works",
     blurb: "A plain-English tour of the technology and how a briefing is built." },
+  { file: "architecture.html", title: "Architecture",
+    blurb: "How the system fits together and how prospect data is processed." },
   { file: "project-tracker.html", title: "Build Tracker",
     blurb: "Every feature we've shipped, grouped by phase." },
   { file: "runbook.html", title: "Operations Runbook",
     blurb: "Setup, running, deployment, and troubleshooting." },
-  { file: "build-plan.html", title: "Architecture & Build Plan",
-    blurb: "The design, tech stack, and product roadmap." },
+  { file: "build-plan.html", title: "Build Plan & Roadmap",
+    blurb: "The product framing, tech choices, and roadmap." },
 ];
 
 function page(title, bodyHtml, { back = true } = {}) {
@@ -79,8 +81,9 @@ function renderMd(src, dest, title) {
   const md = readFileSync(resolve(DOCS, src), "utf8");
   writeFileSync(resolve(OUT, dest), page(title, marked.parse(md)));
 }
+renderMd("ARCHITECTURE.md", "architecture.html", "Architecture");
 renderMd("RUNBOOK.md", "runbook.html", "Operations Runbook");
-renderMd("BUILD_PLAN.md", "build-plan.html", "Architecture & Build Plan");
+renderMd("BUILD_PLAN.md", "build-plan.html", "Build Plan & Roadmap");
 
 // Copy the two self-contained HTML docs verbatim (they carry their own styles).
 copyFileSync(resolve(DOCS, "HOW_IT_WORKS.html"), resolve(OUT, "how-it-works.html"));

@@ -22,7 +22,7 @@ PR merged → push to main → GitHub Actions runner:
 
 ## What's already provisioned (done once, live now)
 
-- **Service account** `github-deployer@salesintel-vm-08011625.iam.gserviceaccount.com`
+- **Service account** `github-deployer@your-gcp-project-id.iam.gserviceaccount.com`
   with roles `roles/compute.instanceAdmin.v1` + `roles/iap.tunnelResourceAccessor`.
 - **Workload Identity Pool** `github-pool` + **OIDC provider** `github-provider`, issuer
   `https://token.actions.githubusercontent.com`, restricted by attribute condition to
@@ -33,12 +33,12 @@ PR merged → push to main → GitHub Actions runner:
 
   | Name | Value |
   |---|---|
-  | `GCP_PROJECT` | `salesintel-vm-08011625` |
+  | `GCP_PROJECT` | `your-gcp-project-id` |
   | `GCP_ZONE` | `us-central1-a` |
-  | `VM_NAME` | `salesintel-vm` |
+  | `VM_NAME` | `your-vm` |
   | `SITE_HOST` | `salesintel-ai.duckdns.org` |
-  | `GCP_WIF_PROVIDER` | `projects/228186424860/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
-  | `GCP_SERVICE_ACCOUNT` | `github-deployer@salesintel-vm-08011625.iam.gserviceaccount.com` |
+  | `GCP_WIF_PROVIDER` | `projects/your-project-number/locations/global/workloadIdentityPools/github-pool/providers/github-provider` |
+  | `GCP_SERVICE_ACCOUNT` | `github-deployer@your-gcp-project-id.iam.gserviceaccount.com` |
 
 - **No secrets** are needed — keyless auth uses the variables above plus the workflow's
   `permissions: id-token: write`.
@@ -51,7 +51,7 @@ If the pool/provider ever need rebuilding, these are the exact commands (run as 
 owner; `$GC` = full gcloud path on Windows):
 
 ```bash
-PROJECT=salesintel-vm-08011625; PNUM=228186424860; REPO=indrani-projects/salesintel-ai
+PROJECT=your-gcp-project-id; PNUM=your-project-number; REPO=indrani-projects/salesintel-ai
 SA_EMAIL="github-deployer@${PROJECT}.iam.gserviceaccount.com"
 
 gcloud services enable iamcredentials.googleapis.com sts.googleapis.com iam.googleapis.com --project="$PROJECT"
@@ -113,7 +113,7 @@ DB lives outside the deploy dir.
 When the demo's done, remove the deployer identity entirely:
 
 ```bash
-PROJECT=salesintel-vm-08011625
+PROJECT=your-gcp-project-id
 gcloud iam service-accounts delete "github-deployer@${PROJECT}.iam.gserviceaccount.com"
 gcloud iam workload-identity-pools delete github-pool --location=global --project="$PROJECT"
 ```

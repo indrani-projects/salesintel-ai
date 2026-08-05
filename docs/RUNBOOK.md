@@ -420,7 +420,7 @@ gh pr create --base main --head feat/<slug> --title "..." --body "..."
 |---|---|
 | `.githooks/pre-push` | Rejects direct pushes to `main`/`master` (override: `SALESINTEL_ALLOW_MAIN=1`). |
 | `.githooks/commit-msg` | Auto-adds `Co-Authored-By: Claude`. |
-| git `user.*` | Author is always `indrani-projects <indrani.patra.projects@gmail.com>`. |
+| git `user.*` | Author is always `indrani-projects <indrani-projects@users.noreply.github.com>`. |
 
 > These git hooks are **client-side** — they protect anyone working in a local clone
 > that ran `bootstrap`. They do **not** stop edits made through the GitHub website or
@@ -452,7 +452,7 @@ The database is untouched (it lives in `/var/lib/salesintel`, outside the deploy
 
 ### Ops on the VM (SSH is via Google IAP tunnel only — no public port 22)
 ```bash
-gcloud compute ssh salesintel-vm --zone=us-central1-a --tunnel-through-iap
+gcloud compute ssh your-vm --zone=us-central1-a --tunnel-through-iap
 systemctl status salesintel caddy            # services active?
 journalctl -u salesintel -n 100 --no-pager   # backend logs
 sqlite3 /var/lib/salesintel/salesintel.db 'PRAGMA journal_mode;'   # -> wal
