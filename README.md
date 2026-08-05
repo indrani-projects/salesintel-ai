@@ -14,9 +14,10 @@ internal product knowledge* into an actual pre-sales angle.
 - **Frontend** — React + Vite + TypeScript + Tailwind, FullCalendar, TanStack Query (`frontend/`)
 - **Backend** — FastAPI + SQLite (SQLModel), background brief generation (`backend/`)
 - **LLM** — OpenAI-compatible client → Google Gemini (`gemini-flash-lite-latest`), swappable via `.env`
-- **Ingestion** — PyMuPDF over the local `docs/<company>/` folder (stands in for live scraping)
+- **Data pipeline** — a keyless **web-to-pitch** engine gathers live public signal by company name (DuckDuckGo + Wikipedia → `trafilatura` extraction; Google News, SEC EDGAR, Reddit feeds), keyword-filters and credibility-scores it (no LLM), then a single LLM call synthesizes the brief. The local `docs/<company>/` folder is a **fallback** (ingested with PyMuPDF).
 
-See [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) for the full plan and
+See **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** for how it fits together and how prospect
+data is processed, [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) for the full plan, and
 [docs/PROJECT_TRACKER.html](docs/PROJECT_TRACKER.html) for build status.
 
 ## Get it running on your machine (first-time setup)
@@ -184,3 +185,24 @@ Created in Step 2 above by copying `backend/.env.example`. Key settings:
 
 To run fully offline, point `LLM_BASE_URL` at a local Ollama
 (`http://localhost:11434/v1`) — no other code changes.
+
+## Project status
+
+This is a **proof-of-concept** built to demonstrate the *synthesis layer*. The deliberate
+shortcuts — a single LLM call over the full source set (no vector DB / RAG), SQLite,
+FastAPI `BackgroundTasks` instead of a job queue, and a local `docs/` fallback — are
+intentional and documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). It is not
+production-hardened.
+
+## Third-party content
+
+The `docs/` folder includes third-party material used **only to demonstrate the app** —
+e.g. publicly available news articles under `docs/sleep_company/` and Zoho's own product
+help content under `docs/zoho/`. These remain the property of their respective owners, are
+included for demonstration/research purposes only, and are **not** covered by this
+project's license.
+
+## License
+
+The project's own source code is released under the **MIT License** — see
+[LICENSE](LICENSE). (The third-party content noted above is excluded.)
